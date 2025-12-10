@@ -1,0 +1,248 @@
+{
+  "totalRevenue": {
+    "amount": 4127000,
+    "previousYear": 3245000,
+    "growthPercent": 27.2,
+    "currency": "USD"
+  },
+  "ordersCount": {
+    "total": 48420,
+    "previousYear": 38100,
+    "growthPercent": 27.1,
+    "averagePerDay": 133
+  },
+  "refundRate": {
+    "totalRefunds": 1842,
+    "refundRate": 3.8,
+    "refundAmount": 156000,
+    "industryAverage": 8.5,
+    "topReasons": [
+      { "reason": "Wrong size", "percent": 42 },
+      { "reason": "Changed mind", "percent": 28 },
+      { "reason": "Damaged in shipping", "percent": 18 },
+      { "reason": "Not as described", "percent": 12 }
+    ]
+  },
+  "discountUsage": {
+    "totalDiscountedOrders": 18240,
+    "discountedOrdersPercent": 37.7,
+    "totalDiscountAmount": 312000,
+    "averageDiscountPercent": 15,
+    "topCodes": [
+      { "code": "SUMMER20", "uses": 4820, "revenue": 482000 },
+      { "code": "WELCOME10", "uses": 3940, "revenue": 198000 },
+      { "code": "FLASH30", "uses": 2180, "revenue": 327000 },
+      { "code": "LOYALTY15", "uses": 1840, "revenue": 276000 }
+    ]
+  },
+  "topProducts": {
+    "products": [
+      { "name": "Widget Pro Max", "sku": "WPM-001", "revenue": 428000, "units": 2840, "image": "📱" },
+      { "name": "Classic Tee Bundle", "sku": "CTB-003", "revenue": 312000, "units": 5200, "image": "👕" },
+      { "name": "Premium Headphones", "sku": "PH-042", "revenue": 289000, "units": 1820, "image": "🎧" },
+      { "name": "Smart Home Kit", "sku": "SHK-007", "revenue": 245000, "units": 980, "image": "🏠" },
+      { "name": "Fitness Tracker Pro", "sku": "FTP-012", "revenue": 198000, "units": 2200, "image": "⌚" }
+    ]
+  },
+  "productPerformance": {
+    "products": [
+      { "name": "Widget Pro Max", "revenue": 428000, "growth": 34.2, "category": "Electronics" },
+      { "name": "Classic Tee", "revenue": 312000, "growth": 12.8, "category": "Apparel" },
+      { "name": "Premium Headphones", "revenue": 289000, "growth": -5.2, "category": "Electronics" },
+      { "name": "Smart Home Kit", "revenue": 245000, "growth": 67.4, "category": "Home" },
+      { "name": "Fitness Tracker", "revenue": 198000, "growth": 22.1, "category": "Electronics" },
+      { "name": "Yoga Mat Pro", "revenue": 156000, "growth": 8.9, "category": "Fitness" },
+      { "name": "Coffee Maker", "revenue": 142000, "growth": -12.3, "category": "Home" },
+      { "name": "Running Shoes", "revenue": 134000, "growth": 45.6, "category": "Apparel" },
+      { "name": "Wireless Charger", "revenue": 98000, "growth": 18.4, "category": "Electronics" },
+      { "name": "Water Bottle", "revenue": 67000, "growth": 5.2, "category": "Fitness" },
+      { "name": "Desk Lamp", "revenue": 54000, "growth": -8.1, "category": "Home" },
+      { "name": "Phone Case", "revenue": 48000, "growth": 92.3, "category": "Electronics" }
+    ]
+  },
+  "inventoryTurnover": {
+    "averageTurnover": 8.4,
+    "industryAverage": 6.2,
+    "totalSkus": 342,
+    "fastMovers": 89,
+    "slowMovers": 42,
+    "outOfStockEvents": 23,
+    "categories": [
+      { "name": "Electronics", "turnover": 12.4, "skus": 48 },
+      { "name": "Apparel", "turnover": 9.2, "skus": 124 },
+      { "name": "Home", "turnover": 6.8, "skus": 86 },
+      { "name": "Fitness", "turnover": 7.1, "skus": 52 },
+      { "name": "Accessories", "turnover": 5.4, "skus": 32 }
+    ]
+  },
+  "customerLifetimeValue": {
+    "averageCLV": 284,
+    "previousYear": 218,
+    "growthPercent": 30.3,
+    "topTierCLV": 1240,
+    "segments": [
+      { "name": "VIP", "clv": 1240, "customers": 842, "percent": 3 },
+      { "name": "Loyal", "clv": 520, "customers": 4210, "percent": 15 },
+      { "name": "Regular", "clv": 180, "customers": 12400, "percent": 44 },
+      { "name": "New", "clv": 67, "customers": 10748, "percent": 38 }
+    ]
+  },
+  "topReferrers": {
+    "referrers": [
+      { "source": "Google Organic", "visitors": 842000, "revenue": 1240000, "conversionRate": 2.1, "icon": "🔍" },
+      { "source": "Instagram", "visitors": 524000, "revenue": 892000, "conversionRate": 2.8, "icon": "📸" },
+      { "source": "Facebook Ads", "visitors": 312000, "revenue": 624000, "conversionRate": 3.2, "icon": "📘" },
+      { "source": "TikTok", "visitors": 289000, "revenue": 412000, "conversionRate": 2.4, "icon": "🎵" },
+      { "source": "Email", "visitors": 186000, "revenue": 542000, "conversionRate": 4.8, "icon": "📧" },
+      { "source": "Direct", "visitors": 142000, "revenue": 298000, "conversionRate": 3.4, "icon": "🔗" }
+    ]
+  },
+  "fulfillmentSpeed": {
+    "averageHours": 18,
+    "previousYear": 28,
+    "improvementPercent": 36,
+    "sameDay": 12,
+    "nextDay": 64,
+    "twoPlusDay": 24,
+    "onTimeRate": 96.4,
+    "monthlyTrend": [
+      { "month": "Jan", "hours": 26 },
+      { "month": "Feb", "hours": 24 },
+      { "month": "Mar", "hours": 22 },
+      { "month": "Apr", "hours": 21 },
+      { "month": "May", "hours": 20 },
+      { "month": "Jun", "hours": 19 },
+      { "month": "Jul", "hours": 18 },
+      { "month": "Aug", "hours": 17 },
+      { "month": "Sep", "hours": 16 },
+      { "month": "Oct", "hours": 17 },
+      { "month": "Nov", "hours": 19 },
+      { "month": "Dec", "hours": 18 }
+    ]
+  },
+  "peakHour": {
+    "hour": 14,
+    "hourLabel": "2 PM",
+    "salesAtPeak": 48500,
+    "hourlyBreakdown": [
+      { "hour": 0, "sales": 2100 },
+      { "hour": 1, "sales": 1200 },
+      { "hour": 2, "sales": 800 },
+      { "hour": 3, "sales": 600 },
+      { "hour": 4, "sales": 900 },
+      { "hour": 5, "sales": 1800 },
+      { "hour": 6, "sales": 4200 },
+      { "hour": 7, "sales": 8500 },
+      { "hour": 8, "sales": 15200 },
+      { "hour": 9, "sales": 22400 },
+      { "hour": 10, "sales": 31500 },
+      { "hour": 11, "sales": 38200 },
+      { "hour": 12, "sales": 42100 },
+      { "hour": 13, "sales": 45800 },
+      { "hour": 14, "sales": 48500 },
+      { "hour": 15, "sales": 44200 },
+      { "hour": 16, "sales": 39800 },
+      { "hour": 17, "sales": 35600 },
+      { "hour": 18, "sales": 32100 },
+      { "hour": 19, "sales": 28400 },
+      { "hour": 20, "sales": 21200 },
+      { "hour": 21, "sales": 14800 },
+      { "hour": 22, "sales": 8200 },
+      { "hour": 23, "sales": 4100 }
+    ]
+  },
+  "geoHotspots": {
+    "topRegion": "California",
+    "topRegionSales": 1247000,
+    "regions": [
+      { "name": "California", "sales": 1247000, "orders": 18420 },
+      { "name": "Texas", "sales": 892000, "orders": 13180 },
+      { "name": "New York", "sales": 756000, "orders": 11200 },
+      { "name": "Florida", "sales": 623000, "orders": 9210 },
+      { "name": "Illinois", "sales": 412000, "orders": 6090 }
+    ]
+  },
+  "funnel": {
+    "visitors": 2400000,
+    "productViews": 1680000,
+    "addedToCart": 182000,
+    "checkout": 98000,
+    "purchased": 42000
+  },
+  "customerLoyalty": {
+    "newCustomers": 28400,
+    "returningCustomers": 14800,
+    "newRevenue": 1840000,
+    "returningRevenue": 2160000,
+    "returningRevenuePercent": 54
+  },
+  "cartRecovery": {
+    "abandonedCarts": 140000,
+    "recoveredCarts": 12600,
+    "recoveredRevenue": 89400,
+    "recoveryRate": 9
+  },
+  "seasonalPeak": {
+    "peakDay": "Black Friday",
+    "peakDate": "Nov 24",
+    "peakRevenue": 156000,
+    "averageDayRevenue": 11200,
+    "multiplier": 13.9,
+    "dailyData": [
+      { "date": "Nov 20", "revenue": 12400 },
+      { "date": "Nov 21", "revenue": 14200 },
+      { "date": "Nov 22", "revenue": 18900 },
+      { "date": "Nov 23", "revenue": 32400 },
+      { "date": "Nov 24", "revenue": 156000 },
+      { "date": "Nov 25", "revenue": 89200 },
+      { "date": "Nov 26", "revenue": 42100 },
+      { "date": "Nov 27", "revenue": 28400 }
+    ]
+  },
+  "aovGrowth": {
+    "startAov": 67,
+    "endAov": 84,
+    "growthPercent": 25,
+    "monthlyAov": [
+      { "month": "Jan", "aov": 67 },
+      { "month": "Feb", "aov": 68 },
+      { "month": "Mar", "aov": 69 },
+      { "month": "Apr", "aov": 71 },
+      { "month": "May", "aov": 72 },
+      { "month": "Jun", "aov": 74 },
+      { "month": "Jul", "aov": 76 },
+      { "month": "Aug", "aov": 78 },
+      { "month": "Sep", "aov": 80 },
+      { "month": "Oct", "aov": 81 },
+      { "month": "Nov", "aov": 83 },
+      { "month": "Dec", "aov": 84 }
+    ]
+  },
+  "topCustomer": {
+    "orderCount": 47,
+    "totalSpent": 8420,
+    "memberSince": "2021",
+    "favoriteCategory": "Electronics"
+  },
+  "fastestSelling": {
+    "productName": "Widget Pro Max",
+    "soldOutTime": "4 hours",
+    "unitsSold": 2400,
+    "launchDate": "Sep 15"
+  },
+  "reviews": {
+    "totalReviews": 4847,
+    "fiveStarCount": 3892,
+    "averageRating": 4.7,
+    "topWords": [
+      { "word": "quality", "count": 1240 },
+      { "word": "fast", "count": 980 },
+      { "word": "love", "count": 876 },
+      { "word": "perfect", "count": 654 },
+      { "word": "excellent", "count": 542 },
+      { "word": "recommend", "count": 498 },
+      { "word": "great", "count": 445 },
+      { "word": "amazing", "count": 389 }
+    ]
+  }
+}

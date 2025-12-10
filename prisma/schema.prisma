@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SApp_Shops {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopify_domain     String               @unique @db.VarChar(255)
+  shop_name          String?              @db.VarChar(255)
+  currency_code      String?              @default("USD") @db.VarChar(10)
+  access_token       String?
+  scope              String?
+  is_active          Boolean?             @default(true)
+  installed_at       DateTime?            @default(now()) @db.Timestamptz(6)
+  uninstalled_at     DateTime?            @db.Timestamptz(6)
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  SApp_WrappedShares SApp_WrappedShares[]
+
+  @@index([shopify_domain], map: "idx_sapp_shops_domain")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SApp_WrappedShareViews {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  share_id           String             @db.Uuid
+  viewer_ip_hash     String?            @db.VarChar(64)
+  user_agent         String?
+  referrer           String?
+  country_code       String?            @db.VarChar(2)
+  viewed_at          DateTime?          @default(now()) @db.Timestamptz(6)
+  slides_viewed      Int?               @default(0)
+  completed          Boolean?           @default(false)
+  duration_seconds   Int?
+  SApp_WrappedShares SApp_WrappedShares @relation(fields: [share_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([viewed_at], map: "idx_sapp_share_views_date")
+  @@index([share_id], map: "idx_sapp_share_views_share")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SApp_WrappedShares {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id                String                   @db.Uuid
+  share_code             String                   @unique @db.VarChar(32)
+  title                  String?                  @db.VarChar(255)
+  wrap_mode              String                   @default("year") @db.VarChar(20)
+  year_a                 Int?
+  year_b                 Int?
+  month                  Int?
+  analytics_data         Json?
+  slides_data            Json?
+  password_hash          String?                  @db.VarChar(255)
+  is_password_protected  Boolean?                 @default(false)
+  expires_at             DateTime?                @db.Timestamptz(6)
+  starts_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  is_active              Boolean?                 @default(true)
+  is_revoked             Boolean?                 @default(false)
+  revoked_at             DateTime?                @db.Timestamptz(6)
+  view_count             Int?                     @default(0)
+  last_viewed_at         DateTime?                @db.Timestamptz(6)
+  created_by             String?                  @db.VarChar(255)
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  SApp_WrappedShareViews SApp_WrappedShareViews[]
+  SApp_Shops             SApp_Shops               @relation(fields: [shop_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([is_active, is_revoked], map: "idx_sapp_wrapped_shares_active")
+  @@index([share_code], map: "idx_sapp_wrapped_shares_code")
+  @@index([shop_id], map: "idx_sapp_wrapped_shares_shop")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model plan {
+  id           String         @id
+  key          String         @unique
+  name         String
+  price        Decimal        @db.Decimal(10, 2)
+  interval     String
+  active       Boolean        @default(true)
+  created_at   DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
+  shop         shop[]
+  subscription subscription[]
+}
+
+model session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime? @db.Timestamptz(6)
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model shop {
+  id                                              String         @id
+  domain                                          String         @unique
+  created_at                                      DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime       @default(now()) @db.Timestamptz(6)
+  current_plan_id                                 String?
+  subscription_id                                 String?
+  plan                                            plan?          @relation(fields: [current_plan_id], references: [id], map: "fk_shop_current_plan")
+  subscription_shop_subscription_idTosubscription subscription?  @relation("shop_subscription_idTosubscription", fields: [subscription_id], references: [id], map: "fk_shop_subscription")
+  subscription_subscription_shop_idToshop         subscription[] @relation("subscription_shop_idToshop")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscription {
+  id                                      String               @id
+  shop_id                                 String
+  plan_id                                 String?
+  shopify_subscription_gid                String?
+  status                                  subscription_status
+  trial_ends_at                           DateTime?            @db.Timestamptz(6)
+  current_period_start                    DateTime?            @db.Timestamptz(6)
+  current_period_end                      DateTime?            @db.Timestamptz(6)
+  is_test                                 Boolean              @default(false)
+  created_at                              DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at                              DateTime             @default(now()) @db.Timestamptz(6)
+  shop_shop_subscription_idTosubscription shop[]               @relation("shop_subscription_idTosubscription")
+  plan                                    plan?                @relation(fields: [plan_id], references: [id], map: "fk_subscription_plan")
+  shop_subscription_shop_idToshop         shop                 @relation("subscription_shop_idToshop", fields: [shop_id], references: [id], map: "fk_subscription_shop")
+  subscription_event                      subscription_event[]
+
+  @@index([plan_id], map: "idx_subscription_plan_id")
+  @@index([shop_id], map: "idx_subscription_shop_id")
+  @@index([status], map: "idx_subscription_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscription_event {
+  id              String                  @id
+  subscription_id String
+  type            subscription_event_type
+  payload         Json?
+  created_at      DateTime                @default(now()) @db.Timestamptz(6)
+  subscription    subscription            @relation(fields: [subscription_id], references: [id], onDelete: Cascade, map: "fk_event_subscription")
+
+  @@index([subscription_id], map: "idx_subscription_event_subscription_id")
+}
+
+/// Web App customers/brands who create Wrapped reports
+model WApp_Customers {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String               @unique @db.VarChar(255)
+  name               String?              @db.VarChar(255)
+  company_name       String?              @db.VarChar(255)
+  currency_code      String?              @default("USD") @db.VarChar(10)
+  is_active          Boolean?             @default(true)
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  supabase_user_id   String?              @unique @db.VarChar(255)
+  avatar_url         String?              @db.VarChar(500)
+  WApp_WrappedShares WApp_WrappedShares[]
+
+  @@index([email], map: "idx_wapp_customers_email")
+  @@index([supabase_user_id], map: "idx_wapp_customers_supabase_id")
+}
+
+/// Shareable Wrapped links for web app customers
+model WApp_WrappedShares {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id            String                   @db.Uuid
+  share_code             String                   @unique @db.VarChar(32)
+  title                  String?                  @db.VarChar(255)
+  wrap_type              String                   @default("ecommerce") @db.VarChar(20)
+  year                   Int?
+  form_data              Json?
+  slides_data            Json?
+  password_hash          String?                  @db.VarChar(255)
+  is_password_protected  Boolean?                 @default(false)
+  expires_at             DateTime?                @db.Timestamptz(6)
+  starts_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  is_active              Boolean?                 @default(true)
+  is_revoked             Boolean?                 @default(false)
+  revoked_at             DateTime?                @db.Timestamptz(6)
+  view_count             Int?                     @default(0)
+  last_viewed_at         DateTime?                @db.Timestamptz(6)
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  WApp_WrappedShareViews WApp_WrappedShareViews[]
+  WApp_Customers         WApp_Customers           @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([is_active, is_revoked], map: "idx_wapp_wrapped_shares_active")
+  @@index([share_code], map: "idx_wapp_wrapped_shares_code")
+  @@index([customer_id], map: "idx_wapp_wrapped_shares_customer")
+}
+
+/// View analytics for web app shared Wrapped links
+model WApp_WrappedShareViews {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  share_id           String             @db.Uuid
+  viewer_ip_hash     String?            @db.VarChar(64)
+  user_agent         String?
+  referrer           String?
+  country_code       String?            @db.VarChar(2)
+  viewed_at          DateTime?          @default(now()) @db.Timestamptz(6)
+  slides_viewed      Int?               @default(0)
+  completed          Boolean?           @default(false)
+  duration_seconds   Int?
+  WApp_WrappedShares WApp_WrappedShares @relation(fields: [share_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([viewed_at], map: "idx_wapp_share_views_date")
+  @@index([share_id], map: "idx_wapp_share_views_share")
+}
+
+enum subscription_event_type {
+  CREATED
+  ACTIVATED
+  CANCELLED
+  RENEWED
+  FAILED
+  UPDATED
+}
+
+enum subscription_status {
+  ACTIVE
+  PENDING
+  CANCELLED
+  EXPIRED
+}

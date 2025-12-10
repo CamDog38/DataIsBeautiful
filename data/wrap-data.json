@@ -1,0 +1,32 @@
+{
+  "user": {
+    "name": "Jane Doe",
+    "handle": "@janedoe"
+  },
+  "year": 2025,
+  "summary": {
+    "totalPosts": 128,
+    "totalViews": 45213,
+    "totalLikes": 9784,
+    "totalComments": 1233
+  },
+  "activityByMonth": [
+    { "month": "Jan", "posts": 5, "views": 1200 },
+    { "month": "Feb", "posts": 8, "views": 2400 },
+    { "month": "Mar", "posts": 12, "views": 4100 },
+    { "month": "Apr", "posts": 10, "views": 3800 },
+    { "month": "May", "posts": 15, "views": 5200 },
+    { "month": "Jun", "posts": 20, "views": 8900 },
+    { "month": "Jul", "posts": 18, "views": 7600 },
+    { "month": "Aug", "posts": 16, "views": 6800 },
+    { "month": "Sep", "posts": 10, "views": 4300 },
+    { "month": "Oct", "posts": 7, "views": 2900 },
+    { "month": "Nov", "posts": 4, "views": 1700 },
+    { "month": "Dec", "posts": 3, "views": 1300 }
+  ],
+  "topItems": [
+    { "title": "How I Visualize Data", "views": 12034, "likes": 3012 },
+    { "title": "Next.js Performance Tips", "views": 8450, "likes": 1950 },
+    { "title": "Designing Dashboards", "views": 6210, "likes": 1430 }
+  ]
+}

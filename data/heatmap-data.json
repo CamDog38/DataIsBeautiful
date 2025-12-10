@@ -1,0 +1,146 @@
+[
+  {
+    "id": "CAT_ELECTRONICS",
+    "label": "Electronics",
+    "name": "Electronics",
+    "sector": "Category",
+    "value": 420000,
+    "changePct": 12.4
+  },
+  {
+    "id": "ELEC_PHONES",
+    "label": "Phones",
+    "name": "Smartphones",
+    "sector": "Electronics",
+    "value": 185000,
+    "changePct": 9.2
+  },
+  {
+    "id": "ELEC_LAPTOPS",
+    "label": "Laptops",
+    "name": "Laptops & Desktops",
+    "sector": "Electronics",
+    "value": 162000,
+    "changePct": 5.8
+  },
+  {
+    "id": "ELEC_AUDIO",
+    "label": "Audio",
+    "name": "Headphones & Speakers",
+    "sector": "Electronics",
+    "value": 98000,
+    "changePct": -3.1
+  },
+  {
+    "id": "CAT_FASHION",
+    "label": "Fashion",
+    "name": "Fashion & Apparel",
+    "sector": "Category",
+    "value": 310000,
+    "changePct": 7.6
+  },
+  {
+    "id": "FASH_MEN",
+    "label": "Men",
+    "name": "Men's Clothing",
+    "sector": "Fashion",
+    "value": 142000,
+    "changePct": 4.3
+  },
+  {
+    "id": "FASH_WOMEN",
+    "label": "Women",
+    "name": "Women's Clothing",
+    "sector": "Fashion",
+    "value": 168000,
+    "changePct": 9.9
+  },
+  {
+    "id": "FASH_SHOES",
+    "label": "Shoes",
+    "name": "Sneakers & Footwear",
+    "sector": "Fashion",
+    "value": 92500,
+    "changePct": -2.7
+  },
+  {
+    "id": "CAT_HOME",
+    "label": "Home",
+    "name": "Home & Living",
+    "sector": "Category",
+    "value": 265000,
+    "changePct": 3.4
+  },
+  {
+    "id": "HOME_DECOR",
+    "label": "Decor",
+    "name": "Decor & Accessories",
+    "sector": "Home",
+    "value": 88000,
+    "changePct": 1.1
+  },
+  {
+    "id": "HOME_FURN",
+    "label": "Furniture",
+    "name": "Furniture",
+    "sector": "Home",
+    "value": 124000,
+    "changePct": -0.9
+  },
+  {
+    "id": "HOME_KITCHEN",
+    "label": "Kitchen",
+    "name": "Kitchen & Dining",
+    "sector": "Home",
+    "value": 73000,
+    "changePct": 6.2
+  },
+  {
+    "id": "CAT_BEAUTY",
+    "label": "Beauty",
+    "name": "Beauty & Personal Care",
+    "sector": "Category",
+    "value": 198000,
+    "changePct": 10.5
+  },
+  {
+    "id": "BEAUTY_SKIN",
+    "label": "Skincare",
+    "name": "Skincare",
+    "sector": "Beauty",
+    "value": 96000,
+    "changePct": 8.4
+  },
+  {
+    "id": "BEAUTY_MAKEUP",
+    "label": "Makeup",
+    "name": "Makeup",
+    "sector": "Beauty",
+    "value": 72000,
+    "changePct": 13.2
+  },
+  {
+    "id": "CAT_SPORTS",
+    "label": "Sports",
+    "name": "Sports & Outdoors",
+    "sector": "Category",
+    "value": 154000,
+    "changePct": -4.6
+  },
+  {
+    "id": "SPORT_GYM",
+    "label": "Gym",
+    "name": "Gym Equipment",
+    "sector": "Sports",
+    "value": 68000,
+    "changePct": -8.1
+  },
+  {
+    "id": "SPORT_OUTDOOR",
+    "label": "Outdoor",
+    "name": "Outdoor & Camping",
+    "sector": "Sports",
+    "value": 54000,
+    "changePct": 2.9
+  }
+]

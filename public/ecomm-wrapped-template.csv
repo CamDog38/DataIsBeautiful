@@ -1,0 +1,25 @@
+Sheet,Field,Description,Example
+Overview,totalRevenue.amount,Total revenue this year (before refunds/discounts),4127000
+Overview,totalRevenue.previousYear,Total revenue last year,3245000
+Overview,ordersCount.total,Total fulfilled orders this year,48420
+Overview,ordersCount.averagePerDay,Average orders per day,133
+Overview,refundRate.refundRate,Refund rate as a percentage,3.8
+Overview,refundRate.industryAverage,Industry average refund rate,8.5
+
+Products,topProducts[0].name,Name of your top product by revenue,"Widget Pro Max"
+Products,topProducts[0].revenue,Revenue from that product,428000
+Products,topProducts[0].units,Units sold for that product,2840
+Products,fastestSelling.name,Product that sold out the fastest,"Limited Edition Drop"
+
+Customers,customerLifetimeValue.averageCLV,Average customer lifetime value,284
+Customers,customerLifetimeValue.segments,Customer segments with CLV and counts,"VIP / Loyal / Regular / New"
+Customers,customerLoyalty.returningShare,Share of revenue from returning customers (%, approximate),62
+
+Marketing,topReferrers[ ].source,Traffic/referral source name,"Google Organic"
+Marketing,topReferrers[ ].revenue,Revenue attributed to this source,1240000
+Marketing,topReferrers[ ].conversionRate,Conversion rate for this source,2.1
+
+Operations,fulfillmentSpeed.averageHours,Average time from order to shipment (hours),18
+Operations,fulfillmentSpeed.onTimeRate,On-time delivery rate (%),96.4
+Operations,refundRate.totalRefunds,Total number of refunded orders,1842
+Operations,inventoryTurnover.averageTurnover,Average inventory turnover (x per year),8.4
