@@ -32,13 +32,17 @@ export function HeatmapGrid({ tiles }: Props) {
           gridAutoRows: "26px",
         }}
       >
-        {tiles.map((tile) => (
+        {tiles.map((tile) => {
+          const colSpan = tile.colSpan ?? 1;
+          const rowSpan = tile.rowSpan ?? 1;
+
+          return (
           <motion.div
             key={tile.id}
             className="relative overflow-hidden rounded-[3px] border border-black/40 text-[10px] leading-snug"
             style={{
-              gridColumnEnd: `span ${tile.colSpan}`,
-              gridRowEnd: `span ${tile.rowSpan}`,
+              gridColumnEnd: `span ${colSpan}`,
+              gridRowEnd: `span ${rowSpan}`,
               backgroundColor: tile.color,
             }}
             whileHover={{ scale: 1.03 }}
@@ -73,7 +77,7 @@ export function HeatmapGrid({ tiles }: Props) {
               </div>
             </div>
           </motion.div>
-        ))}
+        );})}
       </div>
     </main>
   );

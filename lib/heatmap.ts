@@ -15,6 +15,9 @@ export type HeatmapTile = HeatmapDatum & {
   width: number;  // 0..100 percentage
   height: number; // 0..100 percentage
   color: string;
+  // Optional grid span overrides for grid-based layouts (e.g. HeatmapGrid)
+  colSpan?: number;
+  rowSpan?: number;
 };
 
 export function getHeatmapData(): HeatmapDatum[] {
