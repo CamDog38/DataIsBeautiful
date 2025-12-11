@@ -41,6 +41,14 @@ export type SlideType =
   | "channelShowdown"
   | "milestones"
   | "optimizationWins"
+  | "platformSection"
+  // Google Ads specific slide types
+  | "searchTermCloud"
+  | "dayHourHeatmap"
+  | "deviceBreakdown"
+  | "googleAdsMetrics"
+  | "googleAdsCampaigns"
+  | "googleAdsMonthly"
   // Social Media slide types
   | "followerGrowth"
   | "engagementDonut"

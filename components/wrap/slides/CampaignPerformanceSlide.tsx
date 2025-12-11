@@ -86,7 +86,7 @@ export function CampaignPerformanceSlide({ slide }: { slide: Slide }) {
 
             return (
               <motion.div
-                key={campaign.name}
+                key={`${campaign.name}-${i}`}
                 className={`relative bg-black/30 backdrop-blur-sm border rounded-2xl p-4 overflow-hidden ${
                   campaign.isTopPerformer
                     ? "border-amber-500/50"

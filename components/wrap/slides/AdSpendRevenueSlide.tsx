@@ -14,9 +14,24 @@ export function AdSpendRevenueSlide({ slide }: { slide: Slide }) {
   const payload = slide.payload as AdSpendPayload;
   const { spend, revenue, roas, currency = "USD" } = payload;
 
+  const getCurrencySymbol = (code: string) => {
+    const symbols: Record<string, string> = {
+      USD: "$",
+      EUR: "€",
+      GBP: "£",
+      AED: "د.إ",
+      ZAR: "R",
+      AUD: "A$",
+      CAD: "C$",
+    };
+    return symbols[code] || "$";
+  };
+
+  const symbol = getCurrencySymbol(currency);
+
   const formatCurrency = (n: number) => {
-    if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
+    if (n >= 1000000) return `${symbol}${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${symbol}${(n / 1000).toFixed(0)}K`;
     return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
   };
 
@@ -147,7 +162,7 @@ export function AdSpendRevenueSlide({ slide }: { slide: Slide }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
         >
-          Every $1 spent returned <span className="text-emerald-400 font-bold">${roas.toFixed(2)}</span>
+          Every {symbol}1 spent returned <span className="text-emerald-400 font-bold">{symbol}{roas.toFixed(2)}</span>
         </motion.div>
       </div>
     </div>

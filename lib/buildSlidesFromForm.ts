@@ -612,7 +612,7 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
 
   // 3. Campaign Performance (top campaigns by results & CPR)
   if (aggregatedData && aggregatedData.topCampaignsByRevenue.length > 0) {
-    // Use aggregated campaign data, but rank by results
+    // Use aggregated campaign data from manual imports, but rank by results
     const campaignsSource = [...aggregatedData.topCampaignsByRevenue].sort((a, b) => b.results - a.results);
     const topCampaigns = campaignsSource.slice(0, 4);
     const mostEfficient = aggregatedData.mostEfficientCampaign || null;
@@ -635,7 +635,40 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     slides.push({
       id: "campaign-performance",
       type: "campaignPerformance",
-      title: "Top Campaigns",
+      title: "Top Campaigns Overall",
+      subtitle: "The campaigns that drove results.",
+      payload: {
+        campaigns,
+        totalSpend: totalSpendTop,
+        totalResults: totalResultsTop,
+        totalImpressions: totalImpressionsTop,
+        currency,
+      },
+    });
+  } else if (aggregatedData && aggregatedData.googleAdsTopCampaigns && aggregatedData.googleAdsTopCampaigns.length > 0) {
+    // When using Snowflake-only data, derive "overall" campaigns from Google Ads top campaigns
+    const source = [...aggregatedData.googleAdsTopCampaigns].sort((a, b) => (b.conversions || 0) - (a.conversions || 0));
+    const topCampaigns = source.slice(0, 4);
+
+    const campaigns = topCampaigns.map((c, index) => ({
+      name: c.campaignName,
+      spend: c.spend,
+      results: c.conversions,
+      impressions: c.impressions,
+      cpr: c.costPerResult,
+      primaryResultTypeName: undefined,
+      isTopPerformer: index === 0,
+      isMostEfficient: false,
+    }));
+
+    const totalSpendTop = topCampaigns.reduce((sum, c) => sum + (c.spend || 0), 0);
+    const totalResultsTop = topCampaigns.reduce((sum, c) => sum + (c.conversions || 0), 0);
+    const totalImpressionsTop = topCampaigns.reduce((sum, c) => sum + (c.impressions || 0), 0);
+
+    slides.push({
+      id: "campaign-performance",
+      type: "campaignPerformance",
+      title: "Top Campaigns Overall",
       subtitle: "The campaigns that drove results.",
       payload: {
         campaigns,
@@ -685,7 +718,7 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     slides.push({
       id: "campaign-performance",
       type: "campaignPerformance",
-      title: "Top Campaigns",
+      title: "Top Campaigns Overall",
       subtitle: "The campaigns that drove results.",
       payload: {
         campaigns,
@@ -697,7 +730,7 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     });
   }
 
-  // 4. Ad Metrics Grid (impressions, clicks, results, CTR, CPC, CPR)
+  // 4. Ad Metrics Grid (overall impressions, clicks, results, CTR, CPC, CPR)
   if (form.totalImpressions || form.totalClicks) {
     const impressions = parseNum(form.totalImpressions);
     const clicks = parseNum(form.totalClicks);
@@ -710,7 +743,7 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     slides.push({
       id: "ad-metrics",
       type: "adMetricsGrid",
-      title: "Performance Metrics",
+      title: "Overall Performance Metrics",
       subtitle: "The numbers behind your success.",
       payload: {
         impressions,
@@ -919,6 +952,133 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
         },
       });
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GOOGLE ADS SPECIFIC SLIDES (only shown when Google Ads data is available)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const hasGoogleExtras = !!(
+    aggregatedData?.googleAdsSearchTerms?.length ||
+    aggregatedData?.googleAdsHourlyStats?.length ||
+    aggregatedData?.googleAdsDeviceStats?.length ||
+    aggregatedData?.googleAdsTopCampaigns?.length ||
+    aggregatedData?.googleAdsMonthlyPerformance?.length
+  );
+
+  if (hasGoogleExtras) {
+    slides.push({
+      id: "section-google-ads",
+      type: "platformSection",
+      title: "Google Ads",
+      subtitle: "Your deep-dive into Google performance.",
+      payload: {
+        platform: "google",
+      },
+    });
+  }
+
+  // Google Ads performance metrics (Google-only version of overall metrics)
+  const googleSummary: any = (aggregatedData as any)?.googleAdsSummary;
+  if (googleSummary && (googleSummary.impressions || googleSummary.clicks || googleSummary.conversions)) {
+    const gImpressions = googleSummary.impressions || 0;
+    const gClicks = googleSummary.clicks || 0;
+    const gConversions = googleSummary.conversions || 0;
+    const gSpend = googleSummary.spend || 0;
+    const gCtr = googleSummary.ctr || (gImpressions > 0 ? (gClicks / gImpressions) * 100 : 0);
+    const gCpc = googleSummary.cpc || (gClicks > 0 ? gSpend / gClicks : 0);
+    const gCpa = gConversions > 0 ? gSpend / gConversions : 0;
+    const gCpm = gImpressions > 0 ? (gSpend / gImpressions) * 1000 : 0;
+
+    slides.push({
+      id: "google-ads-metrics",
+      type: "googleAdsMetrics",
+      title: "Google Ads Performance Metrics",
+      subtitle: "How Google Ads contributed to your results.",
+      payload: {
+        impressions: gImpressions,
+        clicks: gClicks,
+        conversions: gConversions,
+        ctr: gCtr,
+        cpc: gCpc,
+        cpa: gCpa,
+        cpm: gCpm,
+        currency,
+      },
+    });
+  }
+
+  // 9. Search Term Word Cloud
+  if (aggregatedData?.googleAdsSearchTerms && aggregatedData.googleAdsSearchTerms.length > 0) {
+    slides.push({
+      id: "search-term-cloud",
+      type: "searchTermCloud",
+      title: "Your Top Search Terms",
+      subtitle: "The queries that drove your conversions.",
+      payload: {
+        terms: aggregatedData.googleAdsSearchTerms,
+        currency,
+      },
+    });
+  }
+
+  // 10. Day/Hour Heatmap
+  if (aggregatedData?.googleAdsHourlyStats && aggregatedData.googleAdsHourlyStats.length > 0) {
+    slides.push({
+      id: "day-hour-heatmap",
+      type: "dayHourHeatmap",
+      title: "When Your Ads Performed Best",
+      subtitle: "Performance by day and hour.",
+      payload: {
+        data: aggregatedData.googleAdsHourlyStats,
+        metric: "conversions",
+        currency,
+      },
+    });
+  }
+
+  // 11. Device Breakdown
+  if (aggregatedData?.googleAdsDeviceStats && aggregatedData.googleAdsDeviceStats.length > 0) {
+    slides.push({
+      id: "device-breakdown",
+      type: "deviceBreakdown",
+      title: "Device Performance",
+      subtitle: "Where your audience engaged.",
+      payload: {
+        devices: aggregatedData.googleAdsDeviceStats,
+        metric: "spend",
+        currency,
+      },
+    });
+  }
+
+  // 12. Google Ads Top Campaigns
+  if (aggregatedData?.googleAdsTopCampaigns && aggregatedData.googleAdsTopCampaigns.length > 0) {
+    slides.push({
+      id: "google-ads-campaigns",
+      type: "googleAdsCampaigns",
+      title: "Top Google Ads Campaigns",
+      subtitle: "Your best performing campaigns by results.",
+      payload: {
+        campaigns: aggregatedData.googleAdsTopCampaigns,
+        currency,
+      },
+    });
+  }
+
+  // 13. Google Ads Monthly Performance
+  if (aggregatedData?.googleAdsMonthlyPerformance && aggregatedData.googleAdsMonthlyPerformance.length > 0) {
+    slides.push({
+      id: "google-ads-monthly",
+      type: "googleAdsMonthly",
+      title: "Your Peak Month",
+      subtitle: "Monthly performance throughout the year.",
+      payload: {
+        months: aggregatedData.googleAdsMonthlyPerformance,
+        metric: "roas",
+        currency,
+      },
+    });
   }
 
   // Recap

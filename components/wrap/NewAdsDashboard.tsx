@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdsDataManager } from "./AdsDataManager";
+import { FivetranConnector } from "./FivetranConnector";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AggregatedAdsData,
   CampaignData,
@@ -119,6 +121,8 @@ const CURRENCIES = [
 
 export function NewAdsDashboard() {
   const router = useRouter();
+  const { user } = useAuth();
+  const adsUserId = user?.id || "demo-user";
   const [aggregatedData, setAggregatedData] = useState<AggregatedAdsData>(emptyAggregatedData);
   const [formData, setFormData] = useState<AdsFormData>(initialFormData);
   const [activeSection, setActiveSection] = useState<"import" | "edit">("import");
@@ -620,39 +624,258 @@ export function NewAdsDashboard() {
       </div>
       )}
 
-      {/* Automatic Import Placeholder */}
+      {/* Automatic Import - Fivetran Integration */}
       {importMode === "automatic" && (
         <div className="p-6 md:p-8">
-          <div className="rounded-2xl border-2 border-dashed border-orange-400/30 bg-orange-500/5 p-8 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-2">API Integration Coming Soon</h3>
-            <p className="text-sm text-slate-400 max-w-md mx-auto mb-4">
-              Connect your ad platforms directly to automatically import your campaign data. 
-              Supported platforms will include Meta Ads, Google Ads, TikTok Ads, and more.
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Connect Your Ad Platforms</h3>
+            <p className="text-sm text-slate-400">
+              Securely connect your ad accounts to automatically import your campaign data.
+              Your credentials are handled directly by each platform - we never see them.
             </p>
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
-              <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-white/10 text-xs text-slate-400">
-                Meta Ads
-              </div>
-              <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-white/10 text-xs text-slate-400">
-                Google Ads
-              </div>
-              <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-white/10 text-xs text-slate-400">
-                TikTok Ads
-              </div>
-              <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-white/10 text-xs text-slate-400">
-                LinkedIn Ads
-              </div>
-            </div>
+          </div>
+          
+          {/* Fivetran Connector Component */}
+          <FivetranConnector
+            userId={adsUserId}
+            wrapType="ads"
+            onConnectionComplete={(connection) => {
+              console.log("Connection completed:", connection);
+            }}
+            onGenerateWrapped={async (connectedServices, clientCompanyName) => {
+              console.log("Generate Wrapped clicked with services:", connectedServices, "for company:", clientCompanyName);
+              setIsGenerating(true);
+
+              try {
+                // 1. Fetch data from Snowflake via the connected platforms
+                const userId = adsUserId;
+                const year = parseInt(formData.year) || new Date().getFullYear();
+
+                console.log("Fetching Snowflake ads data for:", { userId, platforms: connectedServices, year, companyName: clientCompanyName });
+
+                const snowflakeRes = await fetch("/api/snowflake/ads-data", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userId,
+                    platforms: connectedServices,
+                    year,
+                    companyName: clientCompanyName,
+                  }),
+                });
+
+                const snowflakeData = await snowflakeRes.json();
+                console.log("Snowflake response:", snowflakeData);
+
+                if (!snowflakeRes.ok || !snowflakeData.success) {
+                  throw new Error(snowflakeData.error || "Failed to fetch ads data from Snowflake");
+                }
+
+                const sfData = snowflakeData.data;
+
+                // Determine currency: prefer Snowflake currencyCode (e.g., from Google Ads account),
+                // fall back to existing form currency.
+                const dbCurrencyCode: string | undefined = sfData.currencyCode;
+                const hasDbCurrency = dbCurrencyCode && CURRENCIES.some(c => c.code === dbCurrencyCode);
+                const effectiveCurrency =
+                  (hasDbCurrency && CURRENCIES.find(c => c.code === dbCurrencyCode!)) ||
+                  CURRENCIES.find(c => c.code === formData.currency) ||
+                  CURRENCIES[0];
+                const googlePlatformData = sfData.byPlatform ? sfData.byPlatform["google_ads"] : undefined;
+
+                // 2. Map Snowflake response to form fields
+                const formatCurrencyVal = (val: number) =>
+                  effectiveCurrency.symbol + val.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                const formatNumberVal = (val: number) =>
+                  val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+                // Map platform names for display
+                const platformDisplayNames: Record<string, string> = {
+                  google_ads: "Google Ads",
+                  facebook_ads: "Meta Ads",
+                  linkedin_ads: "LinkedIn Ads",
+                };
+
+                // Sort platforms by spend
+                const platformsBySpend = Object.entries(sfData.byPlatform || {})
+                  .map(([platform, data]: [string, any]) => ({
+                    platform,
+                    displayName: platformDisplayNames[platform] || platform,
+                    ...data,
+                  }))
+                  .sort((a, b) => b.spend - a.spend);
+
+                const topPlatform = platformsBySpend[0];
+                const secondPlatform = platformsBySpend[1];
+
+                // Get top campaigns
+                const campaigns = sfData.campaigns || [];
+                const topCampaign1 = campaigns[0];
+                const topCampaign2 = campaigns[1];
+                // Most efficient = lowest CPC with meaningful spend
+                const efficientCampaigns = [...campaigns]
+                  .filter((c: any) => c.metrics?.conversions > 0)
+                  .sort((a: any, b: any) => a.metrics.cpc - b.metrics.cpc);
+                const mostEfficient = efficientCampaigns[0];
+
+                // Update form data with Snowflake values (including detected currency)
+                setFormData((prev) => ({
+                  ...prev,
+                  currency: effectiveCurrency.code,
+                  totalAdSpend: formatCurrencyVal(sfData.totalSpend || 0),
+                  totalConversions: formatNumberVal(sfData.totalConversions || 0),
+                  totalImpressions: formatNumberVal(sfData.totalImpressions || 0),
+                  totalClicks: formatNumberVal(sfData.totalClicks || 0),
+                  // Channel breakdown
+                  topChannelBySpend: topPlatform?.displayName || "",
+                  spendOnTopChannel: topPlatform ? formatCurrencyVal(topPlatform.spend) : "",
+                  topChannelLeads: topPlatform ? formatNumberVal(topPlatform.conversions) : "",
+                  topChannelCpl: topPlatform && topPlatform.conversions > 0
+                    ? formatCurrencyVal(topPlatform.spend / topPlatform.conversions)
+                    : "",
+                  secondChannel: secondPlatform?.displayName || "",
+                  spendOnSecondChannel: secondPlatform ? formatCurrencyVal(secondPlatform.spend) : "",
+                  secondChannelLeads: secondPlatform ? formatNumberVal(secondPlatform.conversions) : "",
+                  secondChannelCpl: secondPlatform && secondPlatform.conversions > 0
+                    ? formatCurrencyVal(secondPlatform.spend / secondPlatform.conversions)
+                    : "",
+                  // Top campaigns
+                  topCampaign1Name: topCampaign1?.name || "",
+                  topCampaign1Leads: topCampaign1 ? formatNumberVal(topCampaign1.metrics?.conversions || 0) : "",
+                  topCampaign1Spend: topCampaign1 ? formatCurrencyVal(topCampaign1.metrics?.spend || 0) : "",
+                  topCampaign1Cpl: topCampaign1?.metrics?.conversions > 0
+                    ? formatCurrencyVal(topCampaign1.metrics.spend / topCampaign1.metrics.conversions)
+                    : "",
+                  topCampaign2Name: topCampaign2?.name || "",
+                  topCampaign2Leads: topCampaign2 ? formatNumberVal(topCampaign2.metrics?.conversions || 0) : "",
+                  topCampaign2Spend: topCampaign2 ? formatCurrencyVal(topCampaign2.metrics?.spend || 0) : "",
+                  topCampaign2Cpl: topCampaign2?.metrics?.conversions > 0
+                    ? formatCurrencyVal(topCampaign2.metrics.spend / topCampaign2.metrics.conversions)
+                    : "",
+                  mostEfficientCampaign: mostEfficient?.name || "",
+                  mostEfficientCampaignCpl: mostEfficient?.metrics?.conversions > 0
+                    ? formatCurrencyVal(mostEfficient.metrics.spend / mostEfficient.metrics.conversions)
+                    : "",
+                  // Efficiency metrics
+                  averageCpl: sfData.totalConversions > 0
+                    ? formatCurrencyVal(sfData.totalSpend / sfData.totalConversions)
+                    : "",
+                  averageCpm: sfData.totalImpressions > 0
+                    ? formatCurrencyVal((sfData.totalSpend / sfData.totalImpressions) * 1000)
+                    : "",
+                  averageCpc: formatCurrencyVal(sfData.blendedCpc || 0),
+                  averageCtr: (sfData.blendedCtr || 0).toFixed(2) + "%",
+                  // Revenue / ROAS (if available)
+                  revenueAttributed: sfData.totalRevenue > 0 ? formatCurrencyVal(sfData.totalRevenue) : "",
+                  blendedRoas: sfData.blendedRoas > 0 ? sfData.blendedRoas.toFixed(2) + "x" : "",
+                }));
+
+                console.log("Form data updated from Snowflake, now generating wrap...");
+
+                // 3. Build slides and save wrap (reuse handleGenerate logic)
+                const slideFormData = {
+                  // Prefer the company name selected for this wrap, fall back to manual customerName
+                  customerName: clientCompanyName || formData.customerName || "Your",
+                  currencyCode: effectiveCurrency.code,
+                  totalAdSpend: formatCurrencyVal(sfData.totalSpend || 0),
+                  revenueAttributed: sfData.totalRevenue > 0 ? formatCurrencyVal(sfData.totalRevenue) : "0",
+                  blendedRoas: sfData.blendedRoas > 0 ? sfData.blendedRoas.toFixed(2) + "x" : "0x",
+                  totalConversions: formatNumberVal(sfData.totalConversions || 0),
+                  totalImpressions: formatNumberVal(sfData.totalImpressions || 0),
+                  totalClicks: formatNumberVal(sfData.totalClicks || 0),
+                  topChannelBySpend: topPlatform?.displayName || "",
+                  spendOnTopChannel: topPlatform ? formatCurrencyVal(topPlatform.spend) : "",
+                  topChannelRoas: "0x",
+                  secondChannel: secondPlatform?.displayName || "",
+                  spendOnSecondChannel: secondPlatform ? formatCurrencyVal(secondPlatform.spend) : "",
+                  secondChannelRoas: "0x",
+                  bestRoasChannel: "",
+                  bestRoasChannelPerformance: "",
+                  topCampaign1Name: topCampaign1?.name || "",
+                  topCampaign1Revenue: "0",
+                  topCampaign1Roas: "0x",
+                  topCampaign1Spend: topCampaign1 ? formatCurrencyVal(topCampaign1.metrics?.spend || 0) : "",
+                  topCampaign2Name: topCampaign2?.name || "",
+                  topCampaign2Revenue: "0",
+                  mostEfficientCampaign: mostEfficient?.name || "",
+                  mostEfficientCampaignRoas: "0x",
+                  topCreative1Description: "",
+                  topCreative1Performance: "",
+                  topCreative2Description: "",
+                  topCreative2Performance: "",
+                  bestPerformingFormat: "",
+                  bestHookAngle: "",
+                  totalCreativesTested: "",
+                  creativeWinRate: "",
+                  averageCpm: sfData.totalImpressions > 0
+                    ? formatCurrencyVal((sfData.totalSpend / sfData.totalImpressions) * 1000)
+                    : "",
+                  averageCpc: formatCurrencyVal(sfData.blendedCpc || 0),
+                  averageCpa: sfData.totalConversions > 0
+                    ? formatCurrencyVal(sfData.totalSpend / sfData.totalConversions)
+                    : "",
+                  averageCtr: (sfData.blendedCtr || 0).toFixed(2) + "%",
+                  bestMonthForEfficiency: "",
+                  bestMonthCpa: "",
+                  yoyCpaChange: "",
+                  yoyRoasChange: "",
+                };
+
+                // Build aggregated data object with Google Ads specific fields from Snowflake
+                const snowflakeAggregatedData = {
+                  ...aggregatedData,
+                  // Include Google Ads specific data for enhanced slides
+                  googleAdsSearchTerms: sfData.googleAdsSearchTerms,
+                  googleAdsHourlyStats: sfData.googleAdsHourlyStats,
+                  googleAdsDeviceStats: sfData.googleAdsDeviceStats,
+                  googleAdsMonthlyPerformance: sfData.googleAdsMonthlyPerformance,
+                  googleAdsTopCampaigns: sfData.googleAdsTopCampaigns,
+                  googleAdsSummary: googlePlatformData,
+                };
+
+                const { buildAdsSlidesFromForm } = await import("../../lib/buildSlidesFromForm");
+                const slides = buildAdsSlidesFromForm(slideFormData, snowflakeAggregatedData);
+
+                // Use company name in wrap title if available
+                const wrapTitle = clientCompanyName 
+                  ? `${clientCompanyName}'s Ads Wrapped`
+                  : `${formData.customerName || "Demo User"}'s Ads Wrapped`;
+
+                const res = await fetch("/api/wraps", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    title: wrapTitle,
+                    wrap_type: "ads",
+                    year: parseInt(formData.year) || new Date().getFullYear(),
+                    form_data: slideFormData,
+                    slides_data: slides,
+                  }),
+                });
+
+                const wrapData = await res.json();
+                console.log("Wrap saved:", wrapData);
+
+                if (res.ok && wrapData.shareUrl) {
+                  router.push(wrapData.shareUrl);
+                }
+              } catch (error) {
+                console.error("Failed to generate wrap from Snowflake:", error);
+              } finally {
+                setIsGenerating(false);
+              }
+            }}
+          />
+
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <p className="text-xs text-slate-500 mb-4">
+              Data will sync automatically once connected. First sync may take a few minutes.
+            </p>
             <button
               onClick={() => setImportMode("manual")}
-              className="mt-6 px-5 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 transition"
+              className="px-5 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 transition"
             >
-              Use Manual Import Instead
+              ← Use Manual Import Instead
             </button>
           </div>
         </div>

@@ -168,6 +168,51 @@ export interface AggregatedAdsData {
   // Legacy aliases for backward compatibility
   totalConversions: number;
   bestMonthByCpl: { month: string; roas: number; cpl: number } | null;
+  
+  // Google Ads specific data for enhanced slides
+  googleAdsSearchTerms?: {
+    searchTerm: string;
+    clicks: number;
+    conversions: number;
+    conversionValue: number;
+    weight: number;
+  }[];
+  googleAdsHourlyStats?: {
+    dayOfWeek: number;
+    hour: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    conversionValue: number;
+    spend: number;
+  }[];
+  googleAdsDeviceStats?: {
+    device: string;
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+  }[];
+  googleAdsMonthlyPerformance?: {
+    monthStart: string;
+    spend: number;
+    clicks: number;
+    conversions: number;
+    conversionsValue: number;
+    roas: number;
+    highlightLabel: string;
+  }[];
+  googleAdsTopCampaigns?: {
+    campaignId: string;
+    campaignName: string;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    conversionValue: number;
+    spend: number;
+    roas: number;
+    costPerResult: number;
+  }[];
 }
 
 // Helper functions

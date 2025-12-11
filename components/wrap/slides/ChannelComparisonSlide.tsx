@@ -15,6 +15,7 @@ interface Channel {
 interface ChannelPayload {
   channels: Channel[];
   metric: "spend" | "roas" | "revenue" | "conversions";
+  currency?: string;
 }
 
 const CHANNEL_ICONS: Record<string, string> = {
@@ -33,7 +34,22 @@ const CHANNEL_ICONS: Record<string, string> = {
 
 export function ChannelComparisonSlide({ slide }: { slide: Slide }) {
   const payload = slide.payload as ChannelPayload;
-  const { channels, metric = "spend" } = payload;
+  const { channels, metric = "spend", currency = "USD" } = payload;
+
+  const getCurrencySymbol = (code: string) => {
+    const symbols: Record<string, string> = {
+      USD: "$",
+      EUR: "€",
+      GBP: "£",
+      AED: "د.إ",
+      ZAR: "R",
+      AUD: "A$",
+      CAD: "C$",
+    };
+    return symbols[code] || "$";
+  };
+
+  const symbol = getCurrencySymbol(currency);
 
   const getIcon = (name: string) => {
     const lower = name.toLowerCase();
@@ -46,15 +62,15 @@ export function ChannelComparisonSlide({ slide }: { slide: Slide }) {
   const formatValue = (channel: Channel) => {
     switch (metric) {
       case "spend":
-        return { value: channel.spend, formatted: `$${(channel.spend / 1000).toFixed(0)}K`, label: "spend" };
+        return { value: channel.spend, formatted: `${symbol}${(channel.spend / 1000).toFixed(0)}K`, label: "spend" };
       case "revenue":
-        return { value: channel.revenue, formatted: `$${(channel.revenue / 1000).toFixed(0)}K`, label: "revenue" };
+        return { value: channel.revenue, formatted: `${symbol}${(channel.revenue / 1000).toFixed(0)}K`, label: "revenue" };
       case "roas":
         return { value: channel.roas, formatted: `${channel.roas.toFixed(1)}x`, label: "ROAS" };
       case "conversions":
         return { value: channel.conversions || 0, formatted: (channel.conversions || 0).toLocaleString(), label: "conversions" };
       default:
-        return { value: channel.spend, formatted: `$${channel.spend}`, label: "spend" };
+        return { value: channel.spend, formatted: `${symbol}${channel.spend}`, label: "spend" };
     }
   };
 
@@ -125,7 +141,7 @@ export function ChannelComparisonSlide({ slide }: { slide: Slide }) {
                     <div className="text-sm font-bold text-emerald-400">{channel.roas.toFixed(1)}x</div>
                   )}
                   {metric !== "spend" && (
-                    <div className="text-xs text-slate-500">${(channel.spend / 1000).toFixed(0)}K spent</div>
+                    <div className="text-xs text-slate-500">{symbol}{(channel.spend / 1000).toFixed(0)}K spent</div>
                   )}
                 </div>
               </motion.div>

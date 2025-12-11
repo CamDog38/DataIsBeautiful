@@ -221,6 +221,25 @@ model WApp_WrappedShareViews {
   @@index([share_id], map: "idx_wapp_share_views_share")
 }
 
+model fivetran_connections {
+  id                    String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  user_id               String
+  fivetran_connector_id String    @unique
+  service               String
+  schema_name           String
+  setup_state           String?   @default("pending")
+  sync_state            String?   @default("scheduled")
+  last_sync_at          DateTime? @db.Timestamptz(6)
+  created_at            DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime? @default(now()) @db.Timestamptz(6)
+  company_name          String?
+
+  @@unique([user_id, company_name, service], map: "FivetranConnection_user_id_company_service_key")
+  @@unique([user_id, company_name, service], map: "fivetran_connections_user_id_company_service_key")
+  @@index([fivetran_connector_id], map: "idx_fivetran_connections_connector_id")
+  @@index([user_id], map: "idx_fivetran_connections_user_id")
+}
+
 enum subscription_event_type {
   CREATED
   ACTIVATED

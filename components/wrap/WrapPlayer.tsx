@@ -49,6 +49,14 @@ import { EfficiencyTrendsSlide } from "./slides/EfficiencyTrendsSlide";
 import { ChannelShowdownSlide } from "./slides/ChannelShowdownSlide";
 import { MilestonesSlide } from "./slides/MilestonesSlide";
 import { OptimizationWinsSlide } from "./slides/OptimizationWinsSlide";
+// Google Ads specific slides
+import { SearchTermCloudSlide } from "./slides/SearchTermCloudSlide";
+import { DayHourHeatmapSlide } from "./slides/DayHourHeatmapSlide";
+import { DeviceBreakdownSlide } from "./slides/DeviceBreakdownSlide";
+import { GoogleAdsCampaignsSlide } from "./slides/GoogleAdsCampaignsSlide";
+import { GoogleAdsMonthlySlide } from "./slides/GoogleAdsMonthlySlide";
+import { GoogleAdsMetricsSlide } from "./slides/GoogleAdsMetricsSlide";
+import { PlatformSectionSlide } from "./slides/PlatformSectionSlide";
 
 type Props = {
   slides: Slide[];
@@ -167,6 +175,21 @@ export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButto
         return <MilestonesSlide slide={slide} />;
       case "optimizationWins":
         return <OptimizationWinsSlide slide={slide} />;
+      // Platform / Google Ads specific slides
+      case "platformSection":
+        return <PlatformSectionSlide slide={slide} />;
+      case "searchTermCloud":
+        return <SearchTermCloudSlide slide={slide} />;
+      case "dayHourHeatmap":
+        return <DayHourHeatmapSlide slide={slide} />;
+      case "deviceBreakdown":
+        return <DeviceBreakdownSlide slide={slide} />;
+      case "googleAdsMetrics":
+        return <GoogleAdsMetricsSlide slide={slide} />;
+      case "googleAdsCampaigns":
+        return <GoogleAdsCampaignsSlide slide={slide} />;
+      case "googleAdsMonthly":
+        return <GoogleAdsMonthlySlide slide={slide} />;
       case "recap":
         return <RecapSlide slide={slide} />;
       default:
