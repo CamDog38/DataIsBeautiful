@@ -503,6 +503,13 @@ export function buildEcommSlidesFromForm(form: EcommFormData): Slide[] {
     payload: { handle: form.userName || "you" },
   });
 
+  slides.push({
+    id: "wrap-dashboard",
+    type: "wrapDashboard",
+    title: "Explore your wrap",
+    subtitle: "Jump back to any slide.",
+  });
+
   return slides;
 }
 
@@ -1232,6 +1239,13 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     payload: { handle: form.customerName || "you" },
   });
 
+  slides.push({
+    id: "wrap-dashboard",
+    type: "wrapDashboard",
+    title: "Explore your wrap",
+    subtitle: "Jump back to any slide.",
+  });
+
   return slides;
 }
 
@@ -1434,6 +1448,13 @@ export function buildSocialSlidesFromForm(form: SocialFormData): Slide[] {
     title: "That was your Social year.",
     subtitle: "Ready to go even more viral?",
     payload: { handle: form.customerName || form.primaryPlatform || "Creator" },
+  });
+
+  slides.push({
+    id: "wrap-dashboard",
+    type: "wrapDashboard",
+    title: "Explore your wrap",
+    subtitle: "Jump back to any slide.",
   });
 
   return slides;

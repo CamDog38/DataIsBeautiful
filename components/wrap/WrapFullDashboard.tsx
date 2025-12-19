@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import type { Slide } from "../../lib/wrapSlides";
 import { IntroSlide } from "./slides/IntroSlide";
 import { BigNumberSlide } from "./slides/BigNumberSlide";
@@ -29,7 +29,6 @@ import { InventoryTurnoverSlide } from "./slides/InventoryTurnoverSlide";
 import { CustomerLifetimeValueSlide } from "./slides/CustomerLifetimeValueSlide";
 import { TopReferrersSlide } from "./slides/TopReferrersSlide";
 import { FulfillmentSpeedSlide } from "./slides/FulfillmentSpeedSlide";
-// Social Media slides
 import { FollowerGrowthSlide } from "./slides/FollowerGrowthSlide";
 import { EngagementDonutSlide } from "./slides/EngagementDonutSlide";
 import { TopPostsSlide } from "./slides/TopPostsSlide";
@@ -38,7 +37,6 @@ import { ImpressionsReachSlide } from "./slides/ImpressionsReachSlide";
 import { ContentPerformanceSlide } from "./slides/ContentPerformanceSlide";
 import { SocialMilestoneSlide } from "./slides/SocialMilestoneSlide";
 import { BestPostingTimeSlide } from "./slides/BestPostingTimeSlide";
-// Ads slides
 import { AdSpendRevenueSlide } from "./slides/AdSpendRevenueSlide";
 import { AdSpendLeadsSlide } from "./slides/AdSpendLeadsSlide";
 import { ChannelComparisonSlide } from "./slides/ChannelComparisonSlide";
@@ -49,7 +47,7 @@ import { EfficiencyTrendsSlide } from "./slides/EfficiencyTrendsSlide";
 import { ChannelShowdownSlide } from "./slides/ChannelShowdownSlide";
 import { MilestonesSlide } from "./slides/MilestonesSlide";
 import { OptimizationWinsSlide } from "./slides/OptimizationWinsSlide";
-// Google Ads specific slides
+import { PlatformSectionSlide } from "./slides/PlatformSectionSlide";
 import { SearchTermCloudSlide } from "./slides/SearchTermCloudSlide";
 import { DayHourHeatmapSlide } from "./slides/DayHourHeatmapSlide";
 import { DeviceBreakdownSlide } from "./slides/DeviceBreakdownSlide";
@@ -61,38 +59,20 @@ import { MetaAdsMetricsSlide } from "./slides/MetaAdsMetricsSlide";
 import { MetaAdsBestDaySlide } from "./slides/MetaAdsBestDaySlide";
 import { MetaAdsCampaignsResultsSlide } from "./slides/MetaAdsCampaignsResultsSlide";
 import { MetaAdsDeviceBreakdownSlide } from "./slides/MetaAdsDeviceBreakdownSlide";
-import { PlatformSectionSlide } from "./slides/PlatformSectionSlide";
-import { WrapDashboardSlide } from "./slides/WrapDashboardSlide";
-import { WrapFullDashboard } from "./WrapFullDashboard";
 
 type Props = {
   slides: Slide[];
-  autoAdvanceMs?: number;
-  onSave?: () => void;
-  showSaveButton?: boolean;
+  onBack: () => void;
 };
 
-export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButton = false }: Props) {
-  const [index, setIndex] = useState(0);
-  const [dashboardOpen, setDashboardOpen] = useState(false);
+export function WrapFullDashboard({ slides, onBack }: Props) {
+  const [expandedSlide, setExpandedSlide] = useState<Slide | null>(null);
 
-  const slide = slides[index];
+  const items = slides.filter(
+    (s) => s.type !== "wrapDashboard" && s.type !== "intro" && s.type !== "platformSection" && s.type !== "recap",
+  );
 
-  const goNext = useCallback(() => {
-    setIndex((prev) => (prev + 1 < slides.length ? prev + 1 : prev));
-  }, [slides.length]);
-
-  const goPrev = useCallback(() => {
-    setIndex((prev) => (prev > 0 ? prev - 1 : prev));
-  }, []);
-
-  useEffect(() => {
-    if (slide?.type === "wrapDashboard") return;
-    const timer = setTimeout(goNext, autoAdvanceMs);
-    return () => clearTimeout(timer);
-  }, [index, slide?.type, goNext, autoAdvanceMs]);
-
-  function renderSlide() {
+  function renderSlide(slide: Slide) {
     switch (slide.type) {
       case "intro":
         return <IntroSlide slide={slide} />;
@@ -144,7 +124,6 @@ export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButto
         return <TopReferrersSlide slide={slide} />;
       case "fulfillmentSpeed":
         return <FulfillmentSpeedSlide slide={slide} />;
-      // Social Media slides
       case "followerGrowth":
         return <FollowerGrowthSlide slide={slide} />;
       case "engagementDonut":
@@ -161,7 +140,6 @@ export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButto
         return <SocialMilestoneSlide slide={slide} />;
       case "bestPostingTime":
         return <BestPostingTimeSlide slide={slide} />;
-      // Ads slides
       case "adSpendRevenue":
         return <AdSpendRevenueSlide slide={slide} />;
       case "adSpendLeads":
@@ -184,7 +162,6 @@ export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButto
         return <MilestonesSlide slide={slide} />;
       case "optimizationWins":
         return <OptimizationWinsSlide slide={slide} />;
-      // Platform / Google Ads specific slides
       case "platformSection":
         return <PlatformSectionSlide slide={slide} />;
       case "searchTermCloud":
@@ -211,98 +188,107 @@ export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButto
         return <MetaAdsDeviceBreakdownSlide slide={slide} />;
       case "recap":
         return <RecapSlide slide={slide} />;
-      case "wrapDashboard":
-        return (
-          <WrapDashboardSlide
-            slide={slide}
-            slides={slides}
-            currentIndex={index}
-            onSelectIndex={(i) => setIndex(i)}
-            onViewDashboard={() => setDashboardOpen(true)}
-          />
-        );
       default:
         return null;
     }
   }
 
   return (
-    <div
-      className={`relative flex h-screen w-full items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white ${
-        dashboardOpen ? "overflow-auto" : "overflow-hidden"
-      }`}
-    >
-      {dashboardOpen ? (
-        <div className="absolute inset-0 overflow-y-auto">
-          <WrapFullDashboard slides={slides} onBack={() => setDashboardOpen(false)} />
+    <div className="relative min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white">
+      <motion.div
+        className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_100%_0%,rgba(129,140,248,0.35),transparent_55%),radial-gradient(circle_at_0%_100%,rgba(45,212,191,0.35),transparent_55%)]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.4 }}
+        transition={{ duration: 0.6 }}
+      />
+
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 py-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-slate-400">Dashboard</div>
+            <h1 className="text-2xl font-semibold tracking-tight">Your wrap, all in one place</h1>
+            <div className="mt-1 text-sm text-slate-300/80">Scroll to view all slides together.</div>
+          </div>
+          <button
+            onClick={onBack}
+            className="px-4 py-2 rounded-xl border border-white/15 bg-black/20 hover:bg-white/10 transition text-sm"
+          >
+            Back to wrap
+          </button>
         </div>
-      ) : null}
 
-      {!dashboardOpen ? (
-        <>
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1 w-[480px] max-w-[80vw]">
-            {slides.map((s, i) => (
-              <div
-                key={s.id}
-                className="relative h-1 flex-1 rounded-full bg-white/10 overflow-hidden"
-              >
-                <motion.div
-                  className="absolute inset-y-0 left-0 bg-white"
-                  initial={{ width: i < index ? "100%" : "0%" }}
-                  animate={{
-                    width:
-                      i < index ? "100%" : i === index ? "100%" : "0%",
-                  }}
-                  transition={{
-                    duration: i === index ? autoAdvanceMs / 1000 : 0,
-                    ease: "linear",
-                  }}
-                />
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {items.map((s, i) => (
+            <div key={s.id} className="rounded-3xl border border-white/10 bg-white/5 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/10">
+                <div className="text-xs text-slate-300/80">Slide {i + 1}</div>
+                <div className="text-[10px] text-slate-300/70 rounded-full border border-white/10 bg-black/20 px-2 py-1">
+                  {s.type}
+                </div>
               </div>
-            ))}
-          </div>
-
-          <div className="relative w-[960px] h-[540px] rounded-3xl bg-gradient-to-br from-indigo-500/40 via-slate-900/80 to-fuchsia-500/40 border border-white/10 shadow-[0_40px_120px_rgba(0,0,0,0.7)] overflow-hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={slide.id}
-                initial={{ opacity: 0, x: 60, scale: 0.98 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -60, scale: 0.98 }}
-                transition={{ duration: 0.7, ease: [0.25, 0.8, 0.25, 1] }}
-                className="w-full h-full"
-              >
-                {renderSlide()}
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="absolute bottom-4 right-6 flex items-center gap-3 text-xs text-white/60">
-              <button
-                onClick={goPrev}
-                className="px-3 py-1.5 rounded-full border border-white/20 bg-black/20 hover:bg-white/10 transition"
-              >
-                Prev
-              </button>
-              <button
-                onClick={goNext}
-                className="px-3 py-1.5 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 transition"
-              >
-                Next
-              </button>
-              <div className="ml-2">
-                {index + 1} / {slides.length}
+              <div className="aspect-[16/9] w-full">
+                <div className="relative w-full h-full overflow-hidden">
+                  <div className="pointer-events-none absolute left-0 top-0 h-[540px] w-[960px] origin-top-left scale-[0.62] lg:scale-[0.58]">
+                    {renderSlide(s)}
+                  </div>
+                  <button
+                    onClick={() => setExpandedSlide(s)}
+                    className="absolute bottom-3 right-3 h-9 w-9 rounded-xl border border-white/15 bg-black/30 hover:bg-white/10 transition flex items-center justify-center"
+                    aria-label="Expand slide"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M9 3H5a2 2 0 0 0-2 2v4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M15 21h4a2 2 0 0 0 2-2v-4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M21 9V5a2 2 0 0 0-2-2h-4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M3 15v4a2 2 0 0 0 2 2h4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              {showSaveButton && onSave && (
-                <button
-                  onClick={onSave}
-                  className="ml-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition"
-                >
-                  Save & Share
-                </button>
-              )}
             </div>
+          ))}
+        </div>
+      </div>
+
+      {expandedSlide ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <button
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setExpandedSlide(null)}
+            aria-label="Close"
+          />
+          <div className="relative z-10 w-[960px] max-w-[95vw] aspect-[16/9] rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/40 via-slate-900/90 to-fuchsia-500/40 shadow-[0_40px_120px_rgba(0,0,0,0.75)] overflow-hidden">
+            <div className="pointer-events-none w-full h-full">
+              {renderSlide(expandedSlide)}
+            </div>
+            <button
+              onClick={() => setExpandedSlide(null)}
+              className="absolute top-4 right-4 px-3 py-1.5 rounded-full border border-white/15 bg-black/30 hover:bg-white/10 transition text-xs"
+            >
+              Close
+            </button>
           </div>
-        </>
+        </div>
       ) : null}
     </div>
   );

@@ -63,7 +63,8 @@ export type SlideType =
   | "contentPerformance"
   | "socialMilestone"
   | "bestPostingTime"
-  | "recap";
+  | "recap"
+  | "wrapDashboard";
 
 export type Slide = {
   id: string;
