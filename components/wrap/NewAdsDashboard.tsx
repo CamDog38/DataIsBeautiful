@@ -19,6 +19,11 @@ interface AdsFormData {
   customerName: string;
   currency: string;
   year: string;
+  periodType?: "year" | "month" | "custom";
+  periodYear?: string;
+  periodMonth?: string;
+  periodStartDate?: string;
+  periodEndDate?: string;
   
   // Overview metrics (can be auto-calculated or manually entered)
   totalAdSpend: string;
@@ -73,6 +78,11 @@ const initialFormData: AdsFormData = {
   customerName: "",
   currency: "USD",
   year: new Date().getFullYear().toString(),
+  periodType: "year",
+  periodYear: new Date().getFullYear().toString(),
+  periodMonth: "",
+  periodStartDate: "",
+  periodEndDate: "",
   totalAdSpend: "",
   totalConversions: "",
   totalImpressions: "",
@@ -128,6 +138,13 @@ export function NewAdsDashboard() {
   const [activeSection, setActiveSection] = useState<"import" | "edit">("import");
   const [isGenerating, setIsGenerating] = useState(false);
   const [importMode, setImportMode] = useState<"manual" | "automatic">("manual");
+
+  const [showGeneratePrompt, setShowGeneratePrompt] = useState(false);
+  const [generateCompanyName, setGenerateCompanyName] = useState("");
+  const [datePreset, setDatePreset] = useState<"this_year" | "last_year" | "this_month" | "last_month" | "custom">("this_year");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [pendingPlatforms, setPendingPlatforms] = useState<string[] | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -216,87 +233,154 @@ export function NewAdsDashboard() {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const canGenerate = formData.customerName && formData.totalAdSpend;
+  const canGenerate = !!formData.totalAdSpend;
+
+  const periodType = formData.periodType || "year";
+  const selectedYear = formData.periodYear || formData.year || new Date().getFullYear().toString();
+  const selectedMonth = formData.periodMonth || "";
+  const periodLabel = periodType === "month" && selectedMonth ? selectedMonth : selectedYear;
+
+  const toISODate = (d: Date) => d.toISOString().slice(0, 10);
+  const monthName = (d: Date) =>
+    d.toLocaleString(undefined, { month: "long" });
+
+  const computePresetRange = (preset: typeof datePreset) => {
+    const now = new Date();
+    const y = now.getFullYear();
+
+    if (preset === "this_year") {
+      return { startDate: `${y}-01-01`, endDate: `${y}-12-31` };
+    }
+    if (preset === "last_year") {
+      const ly = y - 1;
+      return { startDate: `${ly}-01-01`, endDate: `${ly}-12-31` };
+    }
+    if (preset === "this_month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { startDate: toISODate(start), endDate: toISODate(end) };
+    }
+    if (preset === "last_month") {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { startDate: toISODate(start), endDate: toISODate(end) };
+    }
+    return { startDate: customStartDate, endDate: customEndDate };
+  };
+
+  const periodFromRange = (preset: typeof datePreset, startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if ((preset === "this_year" || preset === "last_year") && startDate.endsWith("-01-01") && endDate.endsWith("-12-31")) {
+      return {
+        periodType: "year" as const,
+        periodYear: start.getFullYear().toString(),
+        periodMonth: "",
+        periodStartDate: "",
+        periodEndDate: "",
+        periodLabel: start.getFullYear().toString(),
+      };
+    }
+
+    if ((preset === "this_month" || preset === "last_month") && start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+      const m = monthName(start);
+      return {
+        periodType: "month" as const,
+        periodYear: start.getFullYear().toString(),
+        periodMonth: m,
+        periodStartDate: "",
+        periodEndDate: "",
+        periodLabel: m,
+      };
+    }
+
+    return {
+      periodType: "custom" as const,
+      periodYear: start.getFullYear().toString(),
+      periodMonth: "",
+      periodStartDate: startDate,
+      periodEndDate: endDate,
+      periodLabel: `${startDate} – ${endDate}`,
+    };
+  };
+
+  const runManualGenerate = async (companyName: string, period: ReturnType<typeof periodFromRange>) => {
+    const slideFormData = {
+      customerName: companyName,
+      periodType: period.periodType,
+      periodYear: period.periodYear,
+      periodMonth: period.periodMonth,
+      periodStartDate: period.periodStartDate,
+      periodEndDate: period.periodEndDate,
+      currencyCode: formData.currency,
+      totalAdSpend: formData.totalAdSpend,
+      revenueAttributed: formData.revenueAttributed || "0",
+      blendedRoas: formData.blendedRoas || "0x",
+      totalConversions: formData.totalConversions,
+      totalImpressions: formData.totalImpressions,
+      totalClicks: formData.totalClicks,
+      topChannelBySpend: formData.topChannelBySpend,
+      spendOnTopChannel: formData.spendOnTopChannel,
+      topChannelRoas: "0x",
+      secondChannel: formData.secondChannel,
+      spendOnSecondChannel: formData.spendOnSecondChannel,
+      secondChannelRoas: "0x",
+      bestRoasChannel: "",
+      bestRoasChannelPerformance: "",
+      topCampaign1Name: formData.topCampaign1Name,
+      topCampaign1Revenue: "0",
+      topCampaign1Roas: "0x",
+      topCampaign1Spend: formData.topCampaign1Spend,
+      topCampaign2Name: formData.topCampaign2Name,
+      topCampaign2Revenue: "0",
+      mostEfficientCampaign: formData.mostEfficientCampaign,
+      mostEfficientCampaignRoas: "0x",
+      topCreative1Description: "",
+      topCreative1Performance: "",
+      topCreative2Description: "",
+      topCreative2Performance: "",
+      bestPerformingFormat: "",
+      bestHookAngle: "",
+      totalCreativesTested: "",
+      creativeWinRate: "",
+      averageCpm: formData.averageCpm,
+      averageCpc: formData.averageCpc,
+      averageCpa: formData.averageCpl,
+      averageCtr: formData.averageCtr,
+      bestMonthForEfficiency: formData.bestMonthForEfficiency,
+      bestMonthCpa: formData.bestMonthCpl,
+      yoyCpaChange: formData.yoyCplChange,
+      yoyRoasChange: formData.yoyRoasChange,
+    };
+
+    const { buildAdsSlidesFromForm } = await import("../../lib/buildSlidesFromForm");
+    const slides = buildAdsSlidesFromForm(slideFormData as any, aggregatedData);
+
+    const res = await fetch("/api/wraps", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: `${companyName}'s ${period.periodLabel} Wrapped`,
+        wrap_type: "ads",
+        year: parseInt(period.periodYear) || new Date().getFullYear(),
+        form_data: slideFormData,
+        slides_data: slides,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.shareUrl) router.push(data.shareUrl);
+  };
 
   const handleGenerate = async () => {
-    setIsGenerating(true);
-    
-    try {
-      // Build form data for slides (must match AdsFormData interface in formDataTypes)
-      const slideFormData = {
-        customerName: formData.customerName,
-        currencyCode: formData.currency,
-        totalAdSpend: formData.totalAdSpend,
-        revenueAttributed: formData.revenueAttributed || "0",
-        blendedRoas: formData.blendedRoas || "0x",
-        totalConversions: formData.totalConversions,
-        totalImpressions: formData.totalImpressions,
-        totalClicks: formData.totalClicks,
-        // Channels
-        topChannelBySpend: formData.topChannelBySpend,
-        spendOnTopChannel: formData.spendOnTopChannel,
-        topChannelRoas: "0x", // Not used when no revenue
-        secondChannel: formData.secondChannel,
-        spendOnSecondChannel: formData.spendOnSecondChannel,
-        secondChannelRoas: "0x",
-        bestRoasChannel: "",
-        bestRoasChannelPerformance: "",
-        // Campaigns
-        topCampaign1Name: formData.topCampaign1Name,
-        topCampaign1Revenue: "0",
-        topCampaign1Roas: "0x",
-        topCampaign1Spend: formData.topCampaign1Spend,
-        topCampaign2Name: formData.topCampaign2Name,
-        topCampaign2Revenue: "0",
-        mostEfficientCampaign: formData.mostEfficientCampaign,
-        mostEfficientCampaignRoas: "0x",
-        // Creatives (empty - removed)
-        topCreative1Description: "",
-        topCreative1Performance: "",
-        topCreative2Description: "",
-        topCreative2Performance: "",
-        bestPerformingFormat: "",
-        bestHookAngle: "",
-        totalCreativesTested: "",
-        creativeWinRate: "",
-        // Efficiency
-        averageCpm: formData.averageCpm,
-        averageCpc: formData.averageCpc,
-        averageCpa: formData.averageCpl, // CPL maps to CPA field
-        averageCtr: formData.averageCtr,
-        bestMonthForEfficiency: formData.bestMonthForEfficiency,
-        bestMonthCpa: formData.bestMonthCpl,
-        yoyCpaChange: formData.yoyCplChange,
-        yoyRoasChange: formData.yoyRoasChange,
-      };
-
-      // Build slides
-      const { buildAdsSlidesFromForm } = await import("../../lib/buildSlidesFromForm");
-      const slides = buildAdsSlidesFromForm(slideFormData, aggregatedData);
-      
-      // Save to database
-      const res = await fetch("/api/wraps", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: `${formData.customerName}'s Ads Wrapped`,
-          wrap_type: "ads",
-          year: parseInt(formData.year) || new Date().getFullYear(),
-          form_data: slideFormData,
-          slides_data: slides,
-        }),
-      });
-
-      const data = await res.json();
-      
-      if (res.ok && data.shareUrl) {
-        router.push(data.shareUrl);
-      }
-    } catch (error) {
-      console.error("Failed to save wrap:", error);
-    } finally {
-      setIsGenerating(false);
-    }
+    setPendingPlatforms(null);
+    setGenerateCompanyName(formData.customerName || "");
+    setDatePreset("this_year");
+    const { startDate, endDate } = computePresetRange("this_year");
+    setCustomStartDate(startDate);
+    setCustomEndDate(endDate);
+    setShowGeneratePrompt(true);
   };
 
   // Input field component
@@ -316,6 +400,207 @@ export function NewAdsDashboard() {
 
   return (
     <div className="w-full max-w-5xl rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 shadow-[0_40px_120px_rgba(0,0,0,0.9)] overflow-hidden">
+      {showGeneratePrompt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white mb-2">Generate Wrapped</h3>
+            <p className="text-sm text-slate-400 mb-4">Choose a company and date range to pull.</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Company Name</label>
+                <input
+                  type="text"
+                  value={generateCompanyName}
+                  onChange={(e) => setGenerateCompanyName(e.target.value)}
+                  placeholder="e.g., Acme Corp"
+                  className="w-full px-4 py-3 rounded-lg bg-slate-900 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Date Range</label>
+                <select
+                  value={datePreset}
+                  onChange={(e) => {
+                    const preset = e.target.value as any;
+                    setDatePreset(preset);
+                    const r = computePresetRange(preset);
+                    setCustomStartDate(r.startDate);
+                    setCustomEndDate(r.endDate);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50"
+                >
+                  <option value="this_year">This year</option>
+                  <option value="last_year">Last year</option>
+                  <option value="this_month">This month</option>
+                  <option value="last_month">Last month</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+
+              {datePreset === "custom" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Start</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">End</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowGeneratePrompt(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const company = generateCompanyName.trim();
+                  if (!company) return;
+
+                  const { startDate, endDate } = computePresetRange(datePreset);
+                  if (!startDate || !endDate) return;
+
+                  const period = periodFromRange(datePreset, startDate, endDate);
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    customerName: company,
+                    year: period.periodYear,
+                    periodType: period.periodType,
+                    periodYear: period.periodYear,
+                    periodMonth: period.periodMonth,
+                  }));
+
+                  setShowGeneratePrompt(false);
+                  setIsGenerating(true);
+
+                  try {
+                    if (!pendingPlatforms) {
+                      await runManualGenerate(company, period);
+                      return;
+                    }
+
+                    // Automatic: pull from Snowflake for selected period
+                    const snowflakeRes = await fetch("/api/snowflake/ads-data", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        userId: adsUserId,
+                        platforms: pendingPlatforms,
+                        year: parseInt(period.periodYear) || new Date().getFullYear(),
+                        companyName: company,
+                        startDate,
+                        endDate,
+                      }),
+                    });
+
+                    const snowflakeData = await snowflakeRes.json();
+                    if (!snowflakeRes.ok || !snowflakeData.success) {
+                      throw new Error(snowflakeData.error || "Failed to fetch ads data from Snowflake");
+                    }
+
+                    const sfData = snowflakeData.data;
+
+                    // We reuse existing auto-generation path by writing the period fields and calling the existing logic:
+                    // (The existing auto generator runs inside onGenerateWrapped; here we run a manual equivalent save.)
+                    const { buildAdsSlidesFromForm } = await import("../../lib/buildSlidesFromForm");
+                    const slideFormData = {
+                      customerName: company,
+                      periodType: period.periodType,
+                      periodYear: period.periodYear,
+                      periodMonth: period.periodMonth,
+                      periodStartDate: period.periodStartDate,
+                      periodEndDate: period.periodEndDate,
+                      currencyCode: (sfData?.byPlatform?.google_ads?.currencyCode || sfData.currencyCode || formData.currency),
+                      totalAdSpend: (sfData.totalSpend || 0).toString(),
+                      revenueAttributed: (sfData.totalRevenue || 0).toString(),
+                      blendedRoas: (sfData.blendedRoas || 0).toString(),
+                      totalConversions: (sfData.totalConversions || 0).toString(),
+                      totalImpressions: (sfData.totalImpressions || 0).toString(),
+                      totalClicks: (sfData.totalClicks || 0).toString(),
+                      topChannelBySpend: "",
+                      spendOnTopChannel: "",
+                      topChannelRoas: "0x",
+                      secondChannel: "",
+                      spendOnSecondChannel: "",
+                      secondChannelRoas: "0x",
+                      bestRoasChannel: "",
+                      bestRoasChannelPerformance: "",
+                      topCampaign1Name: "",
+                      topCampaign1Revenue: "0",
+                      topCampaign1Roas: "0x",
+                      topCampaign1Spend: "0",
+                      topCampaign2Name: "",
+                      topCampaign2Revenue: "0",
+                      mostEfficientCampaign: "",
+                      mostEfficientCampaignRoas: "0x",
+                      topCreative1Description: "",
+                      topCreative1Performance: "",
+                      topCreative2Description: "",
+                      topCreative2Performance: "",
+                      bestPerformingFormat: "",
+                      bestHookAngle: "",
+                      totalCreativesTested: "",
+                      creativeWinRate: "",
+                      averageCpm: "0",
+                      averageCpc: "0",
+                      averageCpa: "0",
+                      averageCtr: "0",
+                      bestMonthForEfficiency: "",
+                      bestMonthCpa: "",
+                      yoyCpaChange: "",
+                      yoyRoasChange: "",
+                    };
+
+                    const slides = buildAdsSlidesFromForm(slideFormData as any, sfData);
+                    const res = await fetch("/api/wraps", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        title: `${company}'s ${period.periodLabel} Wrapped`,
+                        wrap_type: "ads",
+                        year: parseInt(period.periodYear) || new Date().getFullYear(),
+                        form_data: slideFormData,
+                        slides_data: slides,
+                      }),
+                    });
+
+                    const data = await res.json();
+                    if (res.ok && data.shareUrl) router.push(data.shareUrl);
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsGenerating(false);
+                  }
+                }}
+                disabled={!generateCompanyName.trim()}
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-white/10 px-6 md:px-8 py-5 md:py-6 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent">
         <div className="flex items-center justify-between gap-6">
@@ -423,17 +708,61 @@ export function NewAdsDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Year</label>
-                <input
-                  type="text"
-                  value={formData.year}
-                  onChange={(e) => updateField("year", e.target.value)}
-                  placeholder="2025"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white placeholder:text-slate-500 focus:border-orange-400 focus:outline-none"
-                />
+                <label className="block text-xs text-slate-400 mb-1">Period</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={periodType}
+                    onChange={(e) => updateField("periodType", e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white focus:border-orange-400 focus:outline-none"
+                  >
+                    <option value="year">Year</option>
+                    <option value="month">Month</option>
+                  </select>
+                  {periodType === "year" ? (
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => {
+                        updateField("periodYear", e.target.value);
+                        updateField("year", e.target.value);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white focus:border-orange-400 focus:outline-none"
+                    >
+                      {Array.from({ length: 6 }).map((_, idx) => {
+                        const y = (new Date().getFullYear() - idx).toString();
+                        return (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  ) : (
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => updateField("periodMonth", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-white focus:border-orange-400 focus:outline-none"
+                    >
+                      {[
+                        "January",
+                        "February",
+                        "March",
+                        "April",
+                        "May",
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December",
+                      ].map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -644,226 +973,17 @@ export function NewAdsDashboard() {
             }}
             onGenerateWrapped={async (connectedServices, clientCompanyName) => {
               console.log("Generate Wrapped clicked with services:", connectedServices, "for company:", clientCompanyName);
-              setIsGenerating(true);
 
-              try {
-                // 1. Fetch data from Snowflake via the connected platforms
-                const userId = adsUserId;
-                const year = parseInt(formData.year) || new Date().getFullYear();
-
-                console.log("Fetching Snowflake ads data for:", { userId, platforms: connectedServices, year, companyName: clientCompanyName });
-
-                const snowflakeRes = await fetch("/api/snowflake/ads-data", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    userId,
-                    platforms: connectedServices,
-                    year,
-                    companyName: clientCompanyName,
-                  }),
-                });
-
-                const snowflakeData = await snowflakeRes.json();
-                console.log("Snowflake response:", snowflakeData);
-
-                if (!snowflakeRes.ok || !snowflakeData.success) {
-                  throw new Error(snowflakeData.error || "Failed to fetch ads data from Snowflake");
-                }
-
-                const sfData = snowflakeData.data;
-
-                // Determine currency: prefer Snowflake currencyCode (e.g., from Google Ads account),
-                // fall back to existing form currency.
-                const dbCurrencyCode: string | undefined = sfData.currencyCode;
-                const hasDbCurrency = dbCurrencyCode && CURRENCIES.some(c => c.code === dbCurrencyCode);
-                const effectiveCurrency =
-                  (hasDbCurrency && CURRENCIES.find(c => c.code === dbCurrencyCode!)) ||
-                  CURRENCIES.find(c => c.code === formData.currency) ||
-                  CURRENCIES[0];
-                const googlePlatformData = sfData.byPlatform ? sfData.byPlatform["google_ads"] : undefined;
-
-                // 2. Map Snowflake response to form fields
-                const formatCurrencyVal = (val: number) =>
-                  effectiveCurrency.symbol + val.toLocaleString(undefined, { maximumFractionDigits: 2 });
-                const formatNumberVal = (val: number) =>
-                  val.toLocaleString(undefined, { maximumFractionDigits: 0 });
-
-                // Map platform names for display
-                const platformDisplayNames: Record<string, string> = {
-                  google_ads: "Google Ads",
-                  facebook_ads: "Meta Ads",
-                  linkedin_ads: "LinkedIn Ads",
-                };
-
-                // Sort platforms by spend
-                const platformsBySpend = Object.entries(sfData.byPlatform || {})
-                  .map(([platform, data]: [string, any]) => ({
-                    platform,
-                    displayName: platformDisplayNames[platform] || platform,
-                    ...data,
-                  }))
-                  .sort((a, b) => b.spend - a.spend);
-
-                const topPlatform = platformsBySpend[0];
-                const secondPlatform = platformsBySpend[1];
-
-                // Get top campaigns
-                const campaigns = sfData.campaigns || [];
-                const topCampaign1 = campaigns[0];
-                const topCampaign2 = campaigns[1];
-                // Most efficient = lowest CPC with meaningful spend
-                const efficientCampaigns = [...campaigns]
-                  .filter((c: any) => c.metrics?.conversions > 0)
-                  .sort((a: any, b: any) => a.metrics.cpc - b.metrics.cpc);
-                const mostEfficient = efficientCampaigns[0];
-
-                // Update form data with Snowflake values (including detected currency)
-                setFormData((prev) => ({
-                  ...prev,
-                  currency: effectiveCurrency.code,
-                  totalAdSpend: formatCurrencyVal(sfData.totalSpend || 0),
-                  totalConversions: formatNumberVal(sfData.totalConversions || 0),
-                  totalImpressions: formatNumberVal(sfData.totalImpressions || 0),
-                  totalClicks: formatNumberVal(sfData.totalClicks || 0),
-                  // Channel breakdown
-                  topChannelBySpend: topPlatform?.displayName || "",
-                  spendOnTopChannel: topPlatform ? formatCurrencyVal(topPlatform.spend) : "",
-                  topChannelLeads: topPlatform ? formatNumberVal(topPlatform.conversions) : "",
-                  topChannelCpl: topPlatform && topPlatform.conversions > 0
-                    ? formatCurrencyVal(topPlatform.spend / topPlatform.conversions)
-                    : "",
-                  secondChannel: secondPlatform?.displayName || "",
-                  spendOnSecondChannel: secondPlatform ? formatCurrencyVal(secondPlatform.spend) : "",
-                  secondChannelLeads: secondPlatform ? formatNumberVal(secondPlatform.conversions) : "",
-                  secondChannelCpl: secondPlatform && secondPlatform.conversions > 0
-                    ? formatCurrencyVal(secondPlatform.spend / secondPlatform.conversions)
-                    : "",
-                  // Top campaigns
-                  topCampaign1Name: topCampaign1?.name || "",
-                  topCampaign1Leads: topCampaign1 ? formatNumberVal(topCampaign1.metrics?.conversions || 0) : "",
-                  topCampaign1Spend: topCampaign1 ? formatCurrencyVal(topCampaign1.metrics?.spend || 0) : "",
-                  topCampaign1Cpl: topCampaign1?.metrics?.conversions > 0
-                    ? formatCurrencyVal(topCampaign1.metrics.spend / topCampaign1.metrics.conversions)
-                    : "",
-                  topCampaign2Name: topCampaign2?.name || "",
-                  topCampaign2Leads: topCampaign2 ? formatNumberVal(topCampaign2.metrics?.conversions || 0) : "",
-                  topCampaign2Spend: topCampaign2 ? formatCurrencyVal(topCampaign2.metrics?.spend || 0) : "",
-                  topCampaign2Cpl: topCampaign2?.metrics?.conversions > 0
-                    ? formatCurrencyVal(topCampaign2.metrics.spend / topCampaign2.metrics.conversions)
-                    : "",
-                  mostEfficientCampaign: mostEfficient?.name || "",
-                  mostEfficientCampaignCpl: mostEfficient?.metrics?.conversions > 0
-                    ? formatCurrencyVal(mostEfficient.metrics.spend / mostEfficient.metrics.conversions)
-                    : "",
-                  // Efficiency metrics
-                  averageCpl: sfData.totalConversions > 0
-                    ? formatCurrencyVal(sfData.totalSpend / sfData.totalConversions)
-                    : "",
-                  averageCpm: sfData.totalImpressions > 0
-                    ? formatCurrencyVal((sfData.totalSpend / sfData.totalImpressions) * 1000)
-                    : "",
-                  averageCpc: formatCurrencyVal(sfData.blendedCpc || 0),
-                  averageCtr: (sfData.blendedCtr || 0).toFixed(2) + "%",
-                  // Revenue / ROAS (if available)
-                  revenueAttributed: sfData.totalRevenue > 0 ? formatCurrencyVal(sfData.totalRevenue) : "",
-                  blendedRoas: sfData.blendedRoas > 0 ? sfData.blendedRoas.toFixed(2) + "x" : "",
-                }));
-
-                console.log("Form data updated from Snowflake, now generating wrap...");
-
-                // 3. Build slides and save wrap (reuse handleGenerate logic)
-                const slideFormData = {
-                  // Prefer the company name selected for this wrap, fall back to manual customerName
-                  customerName: clientCompanyName || formData.customerName || "Your",
-                  currencyCode: effectiveCurrency.code,
-                  totalAdSpend: formatCurrencyVal(sfData.totalSpend || 0),
-                  revenueAttributed: sfData.totalRevenue > 0 ? formatCurrencyVal(sfData.totalRevenue) : "0",
-                  blendedRoas: sfData.blendedRoas > 0 ? sfData.blendedRoas.toFixed(2) + "x" : "0x",
-                  totalConversions: formatNumberVal(sfData.totalConversions || 0),
-                  totalImpressions: formatNumberVal(sfData.totalImpressions || 0),
-                  totalClicks: formatNumberVal(sfData.totalClicks || 0),
-                  topChannelBySpend: topPlatform?.displayName || "",
-                  spendOnTopChannel: topPlatform ? formatCurrencyVal(topPlatform.spend) : "",
-                  topChannelRoas: "0x",
-                  secondChannel: secondPlatform?.displayName || "",
-                  spendOnSecondChannel: secondPlatform ? formatCurrencyVal(secondPlatform.spend) : "",
-                  secondChannelRoas: "0x",
-                  bestRoasChannel: "",
-                  bestRoasChannelPerformance: "",
-                  topCampaign1Name: topCampaign1?.name || "",
-                  topCampaign1Revenue: "0",
-                  topCampaign1Roas: "0x",
-                  topCampaign1Spend: topCampaign1 ? formatCurrencyVal(topCampaign1.metrics?.spend || 0) : "",
-                  topCampaign2Name: topCampaign2?.name || "",
-                  topCampaign2Revenue: "0",
-                  mostEfficientCampaign: mostEfficient?.name || "",
-                  mostEfficientCampaignRoas: "0x",
-                  topCreative1Description: "",
-                  topCreative1Performance: "",
-                  topCreative2Description: "",
-                  topCreative2Performance: "",
-                  bestPerformingFormat: "",
-                  bestHookAngle: "",
-                  totalCreativesTested: "",
-                  creativeWinRate: "",
-                  averageCpm: sfData.totalImpressions > 0
-                    ? formatCurrencyVal((sfData.totalSpend / sfData.totalImpressions) * 1000)
-                    : "",
-                  averageCpc: formatCurrencyVal(sfData.blendedCpc || 0),
-                  averageCpa: sfData.totalConversions > 0
-                    ? formatCurrencyVal(sfData.totalSpend / sfData.totalConversions)
-                    : "",
-                  averageCtr: (sfData.blendedCtr || 0).toFixed(2) + "%",
-                  bestMonthForEfficiency: "",
-                  bestMonthCpa: "",
-                  yoyCpaChange: "",
-                  yoyRoasChange: "",
-                };
-
-                // Build aggregated data object with Google Ads specific fields from Snowflake
-                const snowflakeAggregatedData = {
-                  ...aggregatedData,
-                  // Include Google Ads specific data for enhanced slides
-                  googleAdsSearchTerms: sfData.googleAdsSearchTerms,
-                  googleAdsHourlyStats: sfData.googleAdsHourlyStats,
-                  googleAdsDeviceStats: sfData.googleAdsDeviceStats,
-                  googleAdsMonthlyPerformance: sfData.googleAdsMonthlyPerformance,
-                  googleAdsTopCampaigns: sfData.googleAdsTopCampaigns,
-                  googleAdsSummary: googlePlatformData,
-                };
-
-                const { buildAdsSlidesFromForm } = await import("../../lib/buildSlidesFromForm");
-                const slides = buildAdsSlidesFromForm(slideFormData, snowflakeAggregatedData);
-
-                // Use company name in wrap title if available
-                const wrapTitle = clientCompanyName 
-                  ? `${clientCompanyName}'s Ads Wrapped`
-                  : `${formData.customerName || "Demo User"}'s Ads Wrapped`;
-
-                const res = await fetch("/api/wraps", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    title: wrapTitle,
-                    wrap_type: "ads",
-                    year: parseInt(formData.year) || new Date().getFullYear(),
-                    form_data: slideFormData,
-                    slides_data: slides,
-                  }),
-                });
-
-                const wrapData = await res.json();
-                console.log("Wrap saved:", wrapData);
-
-                if (res.ok && wrapData.shareUrl) {
-                  router.push(wrapData.shareUrl);
-                }
-              } catch (error) {
-                console.error("Failed to generate wrap from Snowflake:", error);
-              } finally {
-                setIsGenerating(false);
-              }
+              // Open the same Generate modal used by manual generation,
+              // but with the connected platform list prefilled.
+              setPendingPlatforms(connectedServices);
+              setGenerateCompanyName(clientCompanyName || formData.customerName || "");
+              setDatePreset("this_year");
+              const { startDate, endDate } = computePresetRange("this_year");
+              setCustomStartDate(startDate);
+              setCustomEndDate(endDate);
+              setShowGeneratePrompt(true);
+              return;
             }}
           />
 

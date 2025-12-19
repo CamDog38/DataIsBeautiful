@@ -17,9 +17,9 @@ import { generateSchemaName, FIVETRAN_SERVICES } from "@/lib/fivetran";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, platforms, year, companyName } = body;
+    const { userId, platforms, year, companyName, startDate, endDate } = body;
 
-    console.log("[Snowflake ads-data] Request received:", { userId, platforms, year, companyName });
+    console.log("[Snowflake ads-data] Request received:", { userId, platforms, year, companyName, startDate, endDate });
 
     if (!userId) {
       return NextResponse.json(
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     const snowflake = getSnowflakeClient();
     const targetYear = year || new Date().getFullYear();
+    const dateFilter = startDate && endDate ? { startDate, endDate } : undefined;
 
     // Aggregate data from all connected platforms
     let totalSpend = 0;
@@ -55,6 +56,12 @@ export async function POST(request: NextRequest) {
     let googleAdsMonthlyPerformance: any[] = [];
     let googleAdsTopCampaigns: any[] = [];
 
+    // Meta Ads specific data
+    let metaAdsMonthlyPerformance: any[] = [];
+    let metaAdsBestDayOfWeek: any[] = [];
+    let metaAdsTopCampaignsByResults: any[] = [];
+    let metaAdsDeviceStats: any[] = [];
+
     for (const platform of platforms) {
       // Use companyName if provided for new multi-client schema naming
       const schemaName = generateSchemaName(userId, platform, companyName);
@@ -65,48 +72,69 @@ export async function POST(request: NextRequest) {
 
       switch (platform) {
         case FIVETRAN_SERVICES.GOOGLE_ADS:
-          platformData = await snowflake.getGoogleAdsData(schemaName, targetYear);
-          campaigns = await snowflake.getCampaigns(schemaName, platform, targetYear);
+          platformData = await snowflake.getGoogleAdsData(schemaName, targetYear, dateFilter);
+          campaigns = await snowflake.getCampaigns(schemaName, platform, targetYear, dateFilter);
           // Try to read currency code from Google Ads ACCOUNT_HISTORY once
           if (!currencyCode) {
             currencyCode = await snowflake.getGoogleAdsCurrency(schemaName);
           }
           // Fetch Google Ads specific data for enhanced slides
           try {
-            googleAdsSearchTerms = await snowflake.getGoogleAdsSearchTerms(schemaName, targetYear);
+            googleAdsSearchTerms = await snowflake.getGoogleAdsSearchTerms(schemaName, targetYear, dateFilter);
           } catch (e) {
             console.warn("[Snowflake ads-data] Could not fetch search terms:", e);
           }
           try {
-            googleAdsHourlyStats = await snowflake.getGoogleAdsHourlyStats(schemaName, targetYear);
+            googleAdsHourlyStats = await snowflake.getGoogleAdsHourlyStats(schemaName, targetYear, dateFilter);
           } catch (e) {
             console.warn("[Snowflake ads-data] Could not fetch hourly stats:", e);
           }
           try {
-            googleAdsDeviceStats = await snowflake.getGoogleAdsDeviceStats(schemaName, targetYear);
+            googleAdsDeviceStats = await snowflake.getGoogleAdsDeviceStats(schemaName, targetYear, dateFilter);
           } catch (e) {
             console.warn("[Snowflake ads-data] Could not fetch device stats:", e);
           }
           try {
-            googleAdsMonthlyPerformance = await snowflake.getGoogleAdsMonthlyPerformance(schemaName, targetYear);
+            googleAdsMonthlyPerformance = await snowflake.getGoogleAdsMonthlyPerformance(schemaName, targetYear, dateFilter);
             console.log("[Snowflake ads-data] Monthly performance data:", googleAdsMonthlyPerformance.length, "months");
           } catch (e) {
             console.warn("[Snowflake ads-data] Could not fetch monthly performance:", e);
           }
           try {
-            googleAdsTopCampaigns = await snowflake.getGoogleAdsTopCampaigns(schemaName, targetYear);
+            googleAdsTopCampaigns = await snowflake.getGoogleAdsTopCampaigns(schemaName, targetYear, dateFilter);
             console.log("[Snowflake ads-data] Top campaigns data:", googleAdsTopCampaigns.length, "campaigns");
           } catch (e) {
             console.warn("[Snowflake ads-data] Could not fetch top campaigns:", e);
           }
           break;
         case FIVETRAN_SERVICES.META_ADS:
-          platformData = await snowflake.getMetaAdsData(schemaName, targetYear);
-          campaigns = await snowflake.getCampaigns(schemaName, platform, targetYear);
+          platformData = await snowflake.getMetaAdsData(schemaName, targetYear, dateFilter);
+          campaigns = await snowflake.getCampaigns(schemaName, platform, targetYear, dateFilter);
+          // Fetch Meta Ads specific data for enhanced slides
+          try {
+            metaAdsMonthlyPerformance = await snowflake.getMetaAdsMonthlyPerformance(schemaName, targetYear, dateFilter);
+          } catch (e) {
+            console.warn("[Snowflake ads-data] Could not fetch Meta monthly performance:", e);
+          }
+          try {
+            metaAdsBestDayOfWeek = await snowflake.getMetaAdsBestDayOfWeek(schemaName, targetYear, dateFilter);
+          } catch (e) {
+            console.warn("[Snowflake ads-data] Could not fetch Meta best day of week:", e);
+          }
+          try {
+            metaAdsTopCampaignsByResults = await snowflake.getMetaAdsTopCampaignsByResults(schemaName, targetYear, dateFilter);
+          } catch (e) {
+            console.warn("[Snowflake ads-data] Could not fetch Meta top campaigns by results:", e);
+          }
+          try {
+            metaAdsDeviceStats = await snowflake.getMetaAdsDeviceStats(schemaName, targetYear, dateFilter);
+          } catch (e) {
+            console.warn("[Snowflake ads-data] Could not fetch Meta device stats:", e);
+          }
           break;
         case FIVETRAN_SERVICES.LINKEDIN_ADS:
           platformData = await snowflake.getLinkedInAdsData(schemaName, targetYear);
-          campaigns = await snowflake.getCampaigns(schemaName, platform, targetYear);
+          campaigns = await snowflake.getCampaigns(schemaName, platform, targetYear, dateFilter);
           break;
       }
 
@@ -139,6 +167,10 @@ export async function POST(request: NextRequest) {
     const blendedCpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
     const blendedRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
 
+    // Currency: prefer top-level Google currency, otherwise try byPlatform.google_ads
+    const byPlatformGoogleCurrency = byPlatform?.[FIVETRAN_SERVICES.GOOGLE_ADS]?.currencyCode as string | undefined;
+    const effectiveCurrencyCode = currencyCode || byPlatformGoogleCurrency || undefined;
+
     // Sort campaigns by spend and take top 20
     const topCampaigns = allCampaigns
       .sort((a, b) => b.metrics.spend - a.metrics.spend)
@@ -156,17 +188,25 @@ export async function POST(request: NextRequest) {
       campaigns: topCampaigns,
       byPlatform,
       dateRange: {
-        start: `${targetYear}-01-01`,
-        end: `${targetYear}-12-31`,
+        start: startDate && endDate ? startDate : `${targetYear}-01-01`,
+        end: startDate && endDate ? endDate : `${targetYear}-12-31`,
       },
       // Optional currency code (primarily from Google Ads)
-      currencyCode: currencyCode || undefined,
+      currencyCode: effectiveCurrencyCode,
       // Google Ads specific data for enhanced slides
       googleAdsSearchTerms: googleAdsSearchTerms.length > 0 ? googleAdsSearchTerms : undefined,
       googleAdsHourlyStats: googleAdsHourlyStats.length > 0 ? googleAdsHourlyStats : undefined,
       googleAdsDeviceStats: googleAdsDeviceStats.length > 0 ? googleAdsDeviceStats : undefined,
       googleAdsMonthlyPerformance: googleAdsMonthlyPerformance.length > 0 ? googleAdsMonthlyPerformance : undefined,
       googleAdsTopCampaigns: googleAdsTopCampaigns.length > 0 ? googleAdsTopCampaigns : undefined,
+      // Summary objects used by slide generation (mirror old dashboard mapping)
+      googleAdsSummary: byPlatform?.[FIVETRAN_SERVICES.GOOGLE_ADS] || undefined,
+      // Meta Ads specific data for enhanced slides
+      metaAdsMonthlyPerformance: metaAdsMonthlyPerformance.length > 0 ? metaAdsMonthlyPerformance : undefined,
+      metaAdsBestDayOfWeek: metaAdsBestDayOfWeek.length > 0 ? metaAdsBestDayOfWeek : undefined,
+      metaAdsTopCampaignsByResults: metaAdsTopCampaignsByResults.length > 0 ? metaAdsTopCampaignsByResults : undefined,
+      metaAdsDeviceStats: metaAdsDeviceStats.length > 0 ? metaAdsDeviceStats : undefined,
+      metaAdsSummary: byPlatform?.[FIVETRAN_SERVICES.META_ADS] || undefined,
     };
 
     console.log("[Snowflake ads-data] Aggregated data:", {

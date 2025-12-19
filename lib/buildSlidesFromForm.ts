@@ -522,12 +522,27 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     ? revenue / spend
     : parseNum(form.blendedRoas);
 
+  const periodType = form.periodType || "year";
+  const selectedYear = form.periodYear || new Date().getFullYear().toString();
+  const selectedMonth = form.periodMonth || "";
+  const periodLabel =
+    periodType === "custom" && form.periodStartDate && form.periodEndDate
+      ? `${form.periodStartDate} – ${form.periodEndDate}`
+      : periodType === "month" && selectedMonth
+        ? selectedMonth
+        : selectedYear;
+
   // Intro
   slides.push({
     id: "intro",
     type: "intro",
-    title: `${form.customerName || "Your"}'s Ads Wrapped`,
-    subtitle: "Your year in paid media performance.",
+    title: `${form.customerName || "Your"}'s ${periodLabel} Wrapped`,
+    subtitle:
+      periodType === "month"
+        ? "Your month in paid media performance."
+        : periodType === "custom"
+          ? "Your paid media performance for the selected period."
+          : "Your year in paid media performance.",
   });
 
   // 1. Ad Spend Overview - show spend and revenue when available, otherwise spend and results/CPR
@@ -611,9 +626,10 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
   }
 
   // 3. Campaign Performance (top campaigns by results & CPR)
-  if (aggregatedData && aggregatedData.topCampaignsByRevenue.length > 0) {
+  const topCampaignsByRevenue = aggregatedData?.topCampaignsByRevenue || [];
+  if (aggregatedData && topCampaignsByRevenue.length > 0) {
     // Use aggregated campaign data from manual imports, but rank by results
-    const campaignsSource = [...aggregatedData.topCampaignsByRevenue].sort((a, b) => b.results - a.results);
+    const campaignsSource = [...topCampaignsByRevenue].sort((a, b) => b.results - a.results);
     const topCampaigns = campaignsSource.slice(0, 4);
     const mostEfficient = aggregatedData.mostEfficientCampaign || null;
 
@@ -646,24 +662,42 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
       },
     });
   } else if (aggregatedData && aggregatedData.googleAdsTopCampaigns && aggregatedData.googleAdsTopCampaigns.length > 0) {
-    // When using Snowflake-only data, derive "overall" campaigns from Google Ads top campaigns
-    const source = [...aggregatedData.googleAdsTopCampaigns].sort((a, b) => (b.conversions || 0) - (a.conversions || 0));
-    const topCampaigns = source.slice(0, 4);
-
-    const campaigns = topCampaigns.map((c, index) => ({
+    // When using Snowflake-only data, derive "overall" campaigns by combining Google + Meta
+    // (when available), then ranking by results.
+    const googleSource = (aggregatedData.googleAdsTopCampaigns || []).map((c) => ({
       name: c.campaignName,
+      spend: c.spend || 0,
+      results: c.conversions || 0,
+      impressions: c.impressions || 0,
+      cpr: c.costPerResult || 0,
+    }));
+
+    const metaSource = ((aggregatedData as any)?.metaAdsTopCampaignsByResults || []).map((c: any) => ({
+      name: c.campaignName,
+      spend: c.spend || 0,
+      results: c.results || 0,
+      impressions: c.impressions || 0,
+      cpr: c.cpr === null || typeof c.cpr === "undefined" ? 0 : Number(c.cpr) || 0,
+    }));
+
+    const combined = [...googleSource, ...metaSource]
+      .sort((a, b) => (b.results || 0) - (a.results || 0))
+      .slice(0, 4);
+
+    const campaigns = combined.map((c, index) => ({
+      name: c.name,
       spend: c.spend,
-      results: c.conversions,
+      results: c.results,
       impressions: c.impressions,
-      cpr: c.costPerResult,
+      cpr: c.results > 0 ? (c.cpr || c.spend / c.results) : 0,
       primaryResultTypeName: undefined,
       isTopPerformer: index === 0,
       isMostEfficient: false,
     }));
 
-    const totalSpendTop = topCampaigns.reduce((sum, c) => sum + (c.spend || 0), 0);
-    const totalResultsTop = topCampaigns.reduce((sum, c) => sum + (c.conversions || 0), 0);
-    const totalImpressionsTop = topCampaigns.reduce((sum, c) => sum + (c.impressions || 0), 0);
+    const totalSpendTop = combined.reduce((sum, c) => sum + (c.spend || 0), 0);
+    const totalResultsTop = combined.reduce((sum, c) => sum + (c.results || 0), 0);
+    const totalImpressionsTop = combined.reduce((sum, c) => sum + (c.impressions || 0), 0);
 
     slides.push({
       id: "campaign-performance",
@@ -790,10 +824,11 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
   }
 
   // 6. Channel Showdown (Meta vs Google head-to-head when both exist)
-  if (aggregatedData && aggregatedData.channels.length >= 2) {
+  const channelsData = aggregatedData?.channels || [];
+  if (aggregatedData && channelsData.length >= 2) {
     // Find Meta and Google channels
-    const metaChannel = aggregatedData.channels.find(c => c.channel === "meta");
-    const googleChannel = aggregatedData.channels.find(c => c.channel === "google");
+    const metaChannel = channelsData.find(c => c.channel === "meta");
+    const googleChannel = channelsData.find(c => c.channel === "google");
     
     if (metaChannel && googleChannel) {
       slides.push({
@@ -823,9 +858,9 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
   }
 
   // 7. Milestones (meaningful moments from monthly data)
-  if (aggregatedData && aggregatedData.monthlyData.length > 0) {
+  const monthlyData = aggregatedData?.monthlyData || [];
+  if (aggregatedData && monthlyData.length > 0) {
     const milestones: { icon: string; text: string }[] = [];
-    const monthlyData = aggregatedData.monthlyData;
     
     // Find first major spike (month with highest results)
     const bestResultsMonth = monthlyData.reduce((best, m) => m.results > best.results ? m : best);
@@ -841,8 +876,8 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     let crossed100k = false;
     let crossed1m = false;
     for (const m of monthlyData) {
-      const monthImpressions = aggregatedData.channels.reduce((sum, c) => {
-        const channelMonth = c.dailyData.filter(d => d.date.startsWith(m.month));
+      const monthImpressions = channelsData.reduce((sum, c) => {
+        const channelMonth = (c.dailyData || []).filter((d: any) => d.date?.startsWith(m.month));
         return sum + channelMonth.reduce((s, d) => s + d.impressions, 0);
       }, 0);
       cumulativeImpressions += monthImpressions;
@@ -896,9 +931,10 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
   }
 
   // 8. Optimization Wins (best metrics achieved)
-  if (aggregatedData && aggregatedData.channels.length > 0) {
+  const optimizationChannels = aggregatedData?.channels || channelsData || [];
+  if (aggregatedData && optimizationChannels.length > 0) {
     // Calculate best metrics from all campaigns
-    const allCampaigns = aggregatedData.channels.flatMap(c => c.campaigns);
+    const allCampaigns = optimizationChannels.flatMap((c: any) => c.campaigns || []);
     const campaignsWithResults = allCampaigns.filter(c => c.results > 0 && c.cpr > 0);
     const campaignsWithClicks = allCampaigns.filter(c => c.clicks > 0 && c.cpc > 0);
     const campaignsWithImpressions = allCampaigns.filter(c => c.impressions > 0 && c.cpm > 0);
@@ -920,8 +956,8 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     // Find top results day from daily data
     let topResultsDay = "";
     let topResultsDayCount = 0;
-    for (const channel of aggregatedData.channels) {
-      for (const day of channel.dailyData) {
+    for (const channel of optimizationChannels) {
+      for (const day of (channel.dailyData || [])) {
         if (day.results > topResultsDayCount) {
           topResultsDayCount = day.results;
           topResultsDay = day.date;
@@ -1081,13 +1117,119 @@ export function buildAdsSlidesFromForm(form: AdsFormData, aggregatedData?: Aggre
     });
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // META ADS SPECIFIC SLIDES (only shown when Meta Ads data is available)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const hasMetaExtras = !!(
+    (aggregatedData as any)?.metaAdsMonthlyPerformance?.length ||
+    (aggregatedData as any)?.metaAdsBestDayOfWeek?.length ||
+    (aggregatedData as any)?.metaAdsTopCampaignsByResults?.length ||
+    (aggregatedData as any)?.metaAdsDeviceStats?.length
+  );
+
+  if (hasMetaExtras) {
+    slides.push({
+      id: "section-meta-ads",
+      type: "platformSection",
+      title: "Meta Ads",
+      subtitle: "Your deep-dive into Meta performance.",
+      payload: {
+        platform: "meta",
+      },
+    });
+  }
+
+  // Meta Ads performance metrics (Meta-only version of overall metrics)
+  const metaSummary: any = (aggregatedData as any)?.metaAdsSummary;
+  if (metaSummary && (metaSummary.impressions || metaSummary.clicks || metaSummary.conversions)) {
+    const mImpressions = metaSummary.impressions || 0;
+    const mClicks = metaSummary.clicks || 0;
+    const mResults = metaSummary.conversions || 0;
+    const mSpend = metaSummary.spend || 0;
+    const mCtr = metaSummary.ctr || (mImpressions > 0 ? (mClicks / mImpressions) * 100 : 0);
+    const mCpc = metaSummary.cpc || (mClicks > 0 ? mSpend / mClicks : 0);
+    const mCpr = mResults > 0 ? mSpend / mResults : 0;
+    const mCpm = mImpressions > 0 ? (mSpend / mImpressions) * 1000 : 0;
+
+    slides.push({
+      id: "meta-ads-metrics",
+      type: "metaAdsMetrics",
+      title: "Meta Ads Performance Metrics",
+      subtitle: "How Meta Ads contributed to your results.",
+      payload: {
+        impressions: mImpressions,
+        clicks: mClicks,
+        results: mResults,
+        ctr: mCtr,
+        cpc: mCpc,
+        cpr: mCpr,
+        cpm: mCpm,
+        currency,
+      },
+    });
+  }
+
+  if ((aggregatedData as any)?.metaAdsMonthlyPerformance && (aggregatedData as any).metaAdsMonthlyPerformance.length > 0) {
+    slides.push({
+      id: "meta-ads-monthly",
+      type: "metaAdsMonthly",
+      title: "Your Peak Month on Meta",
+      subtitle: "Monthly performance throughout the year.",
+      payload: {
+        months: (aggregatedData as any).metaAdsMonthlyPerformance,
+        metric: "results",
+        currency,
+      },
+    });
+  }
+
+  if ((aggregatedData as any)?.metaAdsBestDayOfWeek && (aggregatedData as any).metaAdsBestDayOfWeek.length > 0) {
+    slides.push({
+      id: "meta-ads-best-day",
+      type: "metaAdsBestDay",
+      title: "Best Days of the Week (Meta)",
+      subtitle: "When landing page views hit hardest.",
+      payload: {
+        days: (aggregatedData as any).metaAdsBestDayOfWeek,
+      },
+    });
+  }
+
+  if ((aggregatedData as any)?.metaAdsTopCampaignsByResults && (aggregatedData as any).metaAdsTopCampaignsByResults.length > 0) {
+    slides.push({
+      id: "meta-ads-top-campaigns-results",
+      type: "metaAdsCampaignsResults",
+      title: "Top Meta Campaigns",
+      subtitle: "Your best performing campaigns by results.",
+      payload: {
+        campaigns: (aggregatedData as any).metaAdsTopCampaignsByResults,
+        currency,
+      },
+    });
+  }
+
+  if ((aggregatedData as any)?.metaAdsDeviceStats && (aggregatedData as any).metaAdsDeviceStats.length > 0) {
+    slides.push({
+      id: "meta-ads-device-breakdown",
+      type: "metaAdsDeviceBreakdown",
+      title: "Device Performance",
+      subtitle: "Where your audience engaged.",
+      payload: {
+        devices: (aggregatedData as any).metaAdsDeviceStats,
+        metric: "spend",
+        currency,
+      },
+    });
+  }
+
   // Recap
   slides.push({
     id: "recap",
     type: "recap",
-    title: "That was your Ads year.",
-    subtitle: "Ready to scale even higher?",
-    payload: { handle: form.customerName || "Advertiser" },
+    title: `That was your ${periodLabel} Ads Wrapped.`,
+    subtitle: "Ready to make the next one even bigger?",
+    payload: { handle: form.customerName || "you" },
   });
 
   return slides;

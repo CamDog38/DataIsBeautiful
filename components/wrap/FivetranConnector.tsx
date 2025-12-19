@@ -445,12 +445,20 @@ export function FivetranConnector({ userId, wrapType, onConnectionComplete, onGe
         <div className="mt-6 pt-6 border-t border-white/10">
           <div className="flex flex-col items-center gap-4">
             {isSyncing && (
-              <div className="flex items-center gap-2 text-sm text-amber-400">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Data is syncing... First sync may take a few minutes.
+              <div className="w-full rounded-lg bg-amber-500/10 border border-amber-400/30 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-amber-300 font-medium">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Sync in progress
+                </div>
+                <div className="mt-1 text-xs text-slate-300">
+                  We’re pulling your last <span className="font-medium text-white">12 months</span> of data for the initial sync. This can take some time depending on the platform and account size.
+                </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  Please be patient—we’re working as fast as possible. If you’d rather come back later, you can close this page and we’ll keep syncing in the background.
+                </div>
               </div>
             )}
             

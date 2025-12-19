@@ -213,6 +213,30 @@ export interface AggregatedAdsData {
     roas: number;
     costPerResult: number;
   }[];
+
+  // Platform summary objects used for overall metrics slides
+  googleAdsSummary?: {
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    revenue?: number;
+    ctr?: number;
+    cpc?: number;
+    roas?: number;
+    currencyCode?: string;
+  };
+  metaAdsSummary?: {
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    revenue?: number;
+    ctr?: number;
+    cpc?: number;
+    roas?: number;
+    currencyCode?: string;
+  };
 }
 
 // Helper functions

@@ -49,6 +49,11 @@ export type SlideType =
   | "googleAdsMetrics"
   | "googleAdsCampaigns"
   | "googleAdsMonthly"
+  | "metaAdsMonthly"
+  | "metaAdsMetrics"
+  | "metaAdsBestDay"
+  | "metaAdsCampaignsResults"
+  | "metaAdsDeviceBreakdown"
   // Social Media slide types
   | "followerGrowth"
   | "engagementDonut"

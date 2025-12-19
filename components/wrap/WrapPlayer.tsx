@@ -56,6 +56,11 @@ import { DeviceBreakdownSlide } from "./slides/DeviceBreakdownSlide";
 import { GoogleAdsCampaignsSlide } from "./slides/GoogleAdsCampaignsSlide";
 import { GoogleAdsMonthlySlide } from "./slides/GoogleAdsMonthlySlide";
 import { GoogleAdsMetricsSlide } from "./slides/GoogleAdsMetricsSlide";
+import { MetaAdsMonthlySlide } from "./slides/MetaAdsMonthlySlide";
+import { MetaAdsMetricsSlide } from "./slides/MetaAdsMetricsSlide";
+import { MetaAdsBestDaySlide } from "./slides/MetaAdsBestDaySlide";
+import { MetaAdsCampaignsResultsSlide } from "./slides/MetaAdsCampaignsResultsSlide";
+import { MetaAdsDeviceBreakdownSlide } from "./slides/MetaAdsDeviceBreakdownSlide";
 import { PlatformSectionSlide } from "./slides/PlatformSectionSlide";
 
 type Props = {
@@ -190,6 +195,16 @@ export function WrapPlayer({ slides, autoAdvanceMs = 6500, onSave, showSaveButto
         return <GoogleAdsCampaignsSlide slide={slide} />;
       case "googleAdsMonthly":
         return <GoogleAdsMonthlySlide slide={slide} />;
+      case "metaAdsMonthly":
+        return <MetaAdsMonthlySlide slide={slide} />;
+      case "metaAdsMetrics":
+        return <MetaAdsMetricsSlide slide={slide} />;
+      case "metaAdsBestDay":
+        return <MetaAdsBestDaySlide slide={slide} />;
+      case "metaAdsCampaignsResults":
+        return <MetaAdsCampaignsResultsSlide slide={slide} />;
+      case "metaAdsDeviceBreakdown":
+        return <MetaAdsDeviceBreakdownSlide slide={slide} />;
       case "recap":
         return <RecapSlide slide={slide} />;
       default:

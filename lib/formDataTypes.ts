@@ -312,6 +312,11 @@ export const ADS_FORM_STORAGE_KEY = "ads-wrapped-form-data";
 // Ads Form Data
 export interface AdsFormData {
   customerName: string;
+  periodType?: "year" | "month" | "custom";
+  periodYear?: string;
+  periodMonth?: string;
+  periodStartDate?: string;
+  periodEndDate?: string;
   currencyCode: string;
   totalAdSpend: string;
   revenueAttributed: string;
