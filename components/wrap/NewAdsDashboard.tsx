@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdsDataManager } from "./AdsDataManager";
-import { FivetranConnector } from "./FivetranConnector";
+import { MetaConnector } from "./MetaConnector";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   AggregatedAdsData,
@@ -964,28 +964,7 @@ export function NewAdsDashboard() {
             </p>
           </div>
           
-          {/* Fivetran Connector Component */}
-          <FivetranConnector
-            userId={adsUserId}
-            wrapType="ads"
-            onConnectionComplete={(connection) => {
-              console.log("Connection completed:", connection);
-            }}
-            onGenerateWrapped={async (connectedServices, clientCompanyName) => {
-              console.log("Generate Wrapped clicked with services:", connectedServices, "for company:", clientCompanyName);
-
-              // Open the same Generate modal used by manual generation,
-              // but with the connected platform list prefilled.
-              setPendingPlatforms(connectedServices);
-              setGenerateCompanyName(clientCompanyName || formData.customerName || "");
-              setDatePreset("this_year");
-              const { startDate, endDate } = computePresetRange("this_year");
-              setCustomStartDate(startDate);
-              setCustomEndDate(endDate);
-              setShowGeneratePrompt(true);
-              return;
-            }}
-          />
+          <MetaConnector />
 
           <div className="mt-8 pt-6 border-t border-white/10">
             <p className="text-xs text-slate-500 mb-4">

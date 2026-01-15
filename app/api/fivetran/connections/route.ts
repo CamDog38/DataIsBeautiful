@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     const schema = generateSchemaName(userId, service as FivetranService, companyName.trim());
     
     // Get the app URL for redirect
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const redirectUri = `${appUrl}/api/fivetran/callback`;
 
     const connection = await client.createConnection({

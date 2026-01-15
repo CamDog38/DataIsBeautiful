@@ -228,7 +228,7 @@ export default function LandingPage() {
             © {new Date().getFullYear()} Data Is Beautiful. All rights reserved.
           </div>
           <div className="flex gap-6 text-sm text-slate-500">
-            <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms</Link>
             <Link href="#" className="hover:text-white transition-colors">Contact</Link>
           </div>
